@@ -13,12 +13,14 @@ const require = createRequire(import.meta.url)
 test('cards and task rows read the card elevation token (the successor of --console-shadow-sm), not borders', async () => {
   const design = await readFile(new URL('../console-ui/src/design-system.css', import.meta.url), 'utf8')
   const resources = await readFile(new URL('../console-ui/src/pages/resource-pages.css', import.meta.url), 'utf8')
+  const library = await readFile(new URL('../node_modules/@zhin.js/console-ui/dist/styles.css', import.meta.url), 'utf8')
   assert.match(design, /--console-shadow-xl:/)
-  assert.match(design, /\.console-card\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
-  assert.match(design, /\.console-sheet-content\[data-side="right"\]/)
   assert.match(design, /--zc-shadow-ring:/)
-  assert.match(design, /\.console-card\s*\{[\s\S]*?border:[^;]*transparent/)
-  assert.match(design, /\.console-dialog-overlay[\s\S]*?backdrop-filter:\s*blur\(4px\)/)
+  // Card, dialog and sheet are the library's (soft cards: borderless white card with shadow-sm; no blurred scrim).
+  // The Console no longer restyles them.
+  for (const selector of ['.console-card {', '.console-dialog-overlay', '.console-sheet-content[data-side="right"]']) assert.ok(!design.includes(selector), selector)
+  assert.match(library, /\.console-card\s*\{/)
+  assert.doesNotMatch(design, /backdrop-filter/)
   assert.match(resources, /\.console-task-row\s*\{[\s\S]*?box-shadow:\s*var\(--console-card-elevation\)/)
 })
 

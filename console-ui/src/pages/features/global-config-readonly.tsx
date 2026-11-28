@@ -33,7 +33,7 @@ export function GlobalConfigReadOnly({ plugin }: { plugin: string }) {
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="space-y-2">
             <p>{readErrorSummary(detail.error, i18n.t("配置"), i18n.locale)}</p>
-            <Button variant="outline" size="sm" onClick={detail.refresh}>{i18n.t("重试读取")}</Button>
+            <Button variant="secondary" size="sm" onClick={detail.refresh}>{i18n.t("重试读取")}</Button>
           </AlertDescription>
         </Alert>
       )

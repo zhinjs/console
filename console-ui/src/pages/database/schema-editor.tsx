@@ -181,10 +181,10 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto" data-schema-editor>
       {apply.notice}
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Button size="sm" variant="outline" onClick={() => { void load() }} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t('刷新')}</Button>
+        <Button size="sm" variant="secondary" onClick={() => { void load() }} disabled={loading}><RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t('刷新')}</Button>
         {canEdit ? <>
           <Button size="sm" onClick={() => open({ kind: 'add-column', name: '', type: 'text', nullable: true, defaultText: '' })}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t('添加列')}</Button>
-          <Button size="sm" variant="outline" onClick={() => open({ kind: 'create-index', name: `${tableName}_idx`.replace(/[^A-Za-z0-9_]/g, '_').slice(0, 60), columns: [], unique: false })}><ListTree className="w-3.5 h-3.5 mr-1" />{i18n.t('添加索引')}</Button>
+          <Button size="sm" variant="secondary" onClick={() => open({ kind: 'create-index', name: `${tableName}_idx`.replace(/[^A-Za-z0-9_]/g, '_').slice(0, 60), columns: [], unique: false })}><ListTree className="w-3.5 h-3.5 mr-1" />{i18n.t('添加索引')}</Button>
         </> : <span className="text-xs text-muted-foreground">{i18n.t('修改表结构需要 ops.database.schema 权限。')}</span>}
       </div>
 
@@ -217,7 +217,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
             <fieldset className="flex flex-wrap gap-3">
               <legend className="mb-1 text-xs text-muted-foreground">{i18n.t('索引列（按勾选顺序）')}</legend>
               {columns.map(column => (
-                <label key={column.name} className="flex items-center gap-1.5 text-sm">
+                <label key={column.name} className="flex items-center gap-2 text-sm">
                   <Checkbox checked={draft.columns.includes(column.name)}
                     onCheckedChange={checked => update({ columns: checked === true ? [...draft.columns, column.name] : draft.columns.filter(name => name !== column.name) })} />
                   <span className="font-mono text-xs">{column.name}</span>
@@ -230,14 +230,14 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
           {apply.planError ? <StatusState compact error={apply.planError} title={i18n.t('无法生成修改')} /> : null}
           {apply.plan ? <SchemaPlanPreview plan={apply.plan} /> : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" size="sm" variant="outline" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
+            <Button type="submit" size="sm" variant="secondary" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
             <Button type="button" size="sm" variant={apply.plan?.destructive ? 'destructive' : 'soft'} disabled={!apply.plan || apply.held} onClick={apply.confirm} data-action="apply-schema">{i18n.t('应用…')}</Button>
           </div>
         </form>
       ) : null}
 
       <section className="shrink-0" aria-label={i18n.t('列')}>
-        <h3 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">{i18n.t('列')}</h3>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{i18n.t('列')}</h3>
         <div className="overflow-auto rounded-md border bg-card">
           <Table className="min-w-full">
             <TableHeader><TableRow className="hover:bg-transparent">
@@ -248,7 +248,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
               {loading && !schema ? <TableRow><TableCell colSpan={5} className="py-6 text-center text-muted-foreground">{i18n.t('加载中…')}</TableCell></TableRow>
                 : columns.map(column => (
                   <TableRow key={column.name}>
-                    <TableCell className="font-mono text-xs">{column.name}{column.primary ? <Badge variant="secondary" size="sm" className="ml-1.5"><KeyRound className="w-3 h-3 mr-0.5" />{i18n.t('主键')}</Badge> : null}</TableCell>
+                    <TableCell className="font-mono text-xs">{column.name}{column.primary ? <Badge variant="secondary" size="sm" className="ml-2"><KeyRound className="w-3 h-3 mr-1" />{i18n.t('主键')}</Badge> : null}</TableCell>
                     <TableCell className="font-mono text-xs">{column.nativeType || column.type}</TableCell>
                     <TableCell className="text-xs">{column.nullable ? i18n.t('是') : i18n.t('否')}</TableCell>
                     <TableCell className="font-mono text-xs">{column.defaultSql ?? ''}</TableCell>
@@ -265,7 +265,7 @@ export function SchemaEditor({ tableName, admin, canEdit, supported, reason, onC
       </section>
 
       <section className="shrink-0" aria-label={i18n.t('索引')}>
-        <h3 className="mb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">{i18n.t('索引')}</h3>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">{i18n.t('索引')}</h3>
         {schema && !schema.indexes.length ? <p className="text-xs text-muted-foreground">{i18n.t('没有索引。')}</p> : (
           <div className="overflow-auto rounded-md border bg-card">
             <Table className="min-w-full">
@@ -371,8 +371,8 @@ export function CreateTableEditor({ admin, supported, reason, onCreated, onCance
         </Table>
       </div>
       <div className="flex flex-wrap gap-2 shrink-0">
-        <Button type="button" size="sm" variant="outline" onClick={() => { apply.reset(); setColumns(previous => [...previous, { name: '', type: 'text', nullable: true, primary: false, autoIncrement: false, defaultText: '' }]) }}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t('添加列')}</Button>
-        <Button type="submit" size="sm" variant="outline" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => { apply.reset(); setColumns(previous => [...previous, { name: '', type: 'text', nullable: true, primary: false, autoIncrement: false, defaultText: '' }]) }}><Plus className="w-3.5 h-3.5 mr-1" />{i18n.t('添加列')}</Button>
+        <Button type="submit" size="sm" variant="secondary" disabled={apply.planning}><Eye className="w-3.5 h-3.5 mr-1" />{i18n.t('预览 DDL')}</Button>
         <Button type="button" size="sm" disabled={!apply.plan || apply.held} onClick={apply.confirm} data-action="apply-schema">{i18n.t('创建…')}</Button>
       </div>
       {draftError ? <p role="alert" className="text-xs text-destructive shrink-0">{draftError}</p> : null}

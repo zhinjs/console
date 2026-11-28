@@ -6,6 +6,8 @@ import { Badge, Button, Card, CardContent, cn, EmptyState, ListItemButton, PageH
 import { useEngagementDetail, useEngagements, useVenues, type ConsoleEngagementDetail } from '@zhin.js/client'
 import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { StatusState } from '../components/StatusState'
+import { featureUnavailableState } from '../utils/feature-disabled.mjs'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { useIsMobile } from '../hooks/useIsMobile'
 import {
   actorLabel,
@@ -66,6 +68,8 @@ function WorkroomBoardPage() {
     void reload()
     if (selectedId) void reloadDetail(selectedId)
   }, [reload, reloadDetail, selectedId])
+  // Without an Agent the Host answers 503 「Agent Runtime 尚未就绪」: the feature is off, not a failed read (zhinjs/zhin#1250).
+  const agentOff = error ? featureUnavailableState(error, i18n.locale) : null
   const totals = useMemo(() => engagementTotals(engagements), [engagements])
   const statusLabel = (status: EngagementStatus) =>
     status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : status === 'cancelled' ? i18n.t("已取消") : i18n.t("失败")
@@ -77,8 +81,8 @@ function WorkroomBoardPage() {
         description={i18n.t("查看多 Agent 协作（Engagement）的参与方、预算消耗、共享黑板与事件。此页只读。")}
         actions={
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/features/ai/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
-            <Button variant="outline" size="sm" disabled={loading} onClick={refresh}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+            <Button asChild variant="secondary" size="sm"><Link to="/features/ai/workrooms/catalog"><Settings2 />{i18n.t("配置 Workrooms")}</Link></Button>
+            <Button variant="secondary" size="sm" disabled={loading} onClick={refresh}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
           </div>
         }
       />
@@ -94,7 +98,7 @@ function WorkroomBoardPage() {
           </div>
           <ul className="flex flex-wrap gap-2">
             {venues.map((venue) => (
-              <li key={venue.key} className="rounded-lg border bg-muted/20 px-3 py-1.5 text-xs">
+              <li key={venue.key} className="rounded-lg border bg-muted/20 px-3 py-2 text-xs">
                 <code className="font-medium">{venue.key}</code>
                 <span className="ml-2 text-muted-foreground">{venueChannelLabel(venue)}</span>
                 <Badge variant="outline" className="ml-2">{venue.floor === 'moderated' ? i18n.t("主持发言") : i18n.t("自由发言")}</Badge>
@@ -118,6 +122,9 @@ function WorkroomBoardPage() {
           <Skeleton className="h-[34rem] rounded-xl" />
           <Skeleton className="h-[34rem] rounded-xl" />
         </div>} />
+      ) : agentOff ? (
+        <StatusState kind="empty" title={i18n.t("Workroom 未启用")} description={agentOff.description}
+          actions={<Button asChild variant="secondary" size="sm"><Link to={CONSOLE_PATHS.ai}>{i18n.t("打开 AI 与模型")}</Link></Button>} />
       ) : error ? (
         <StatusState error={error} title={i18n.t("无法读取协作记录")} description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")} onRetry={refresh} />
       ) : (
@@ -160,7 +167,7 @@ function WorkroomBoardPage() {
               ))}
               {engagements.length === 0 ? (
                 <StatusState kind="empty" compact title={i18n.t("还没有协作记录")} description={i18n.t("Agent 之间发生协作后，记录会出现在这里。")}
-                  actions={<Button asChild size="sm" variant="outline"><Link to="/features/ai/workrooms/catalog">{i18n.t("配置 Workroom")}</Link></Button>} />
+                  actions={<Button asChild size="sm" variant="secondary"><Link to="/features/ai/workrooms/catalog">{i18n.t("配置 Workroom")}</Link></Button>} />
               ) : null}
             </div>
           </section>
@@ -244,9 +251,9 @@ function EngagementDetail({ detail, statusLabel }: {
           ['Tokens', summary.tokensUsed === undefined ? '—' : i18n.number(summary.tokensUsed)],
           [i18n.t("耗时"), summary.wallClockMs === undefined ? '—' : i18n.t("{0} 毫秒", [i18n.number(summary.wallClockMs)])],
         ] as const).map(([label, value]) => (
-          <div key={label} className="bg-background p-2.5">
+          <div key={label} className="bg-background p-3">
             <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="mt-0.5 font-medium">{value}</dd>
+            <dd className="mt-1 font-medium">{value}</dd>
           </div>
         ))}
       </dl>
@@ -259,7 +266,7 @@ function EngagementDetail({ detail, statusLabel }: {
             role="tab"
             aria-selected={view === item.key}
             className={cn(
-              'flex-1 rounded-md px-2 py-1.5 text-xs font-medium',
+              'flex-1 rounded-md px-2 py-2 text-xs font-medium',
               view === item.key ? 'bg-background shadow-console-xs' : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={() => setView(item.key)}
@@ -273,7 +280,7 @@ function EngagementDetail({ detail, statusLabel }: {
         events.length ? (
           <ol className="space-y-2 font-mono text-xs">
             {events.map((event, index) => (
-              <li key={index} className="break-all rounded-lg border p-2.5">
+              <li key={index} className="break-all rounded-lg border p-3">
                 <span className="font-semibold text-foreground">{engagementEventKind(event)}</span>
                 <span className="ml-2 text-muted-foreground">{maskPlatformIds(collaborationEventSummary(event))}</span>
               </li>

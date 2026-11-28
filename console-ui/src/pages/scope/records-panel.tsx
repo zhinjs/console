@@ -6,6 +6,7 @@ import { Badge, Button, Card, Skeleton } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { apiFetch } from '../../utils/auth'
 import { CONSOLE_PATHS } from '../../console-routes.mjs'
+import { featureUnavailableState } from '../../utils/feature-disabled.mjs'
 import { agentSessionsPath, parseImSessionKey, SESSION_SCOPE_LABELS } from '../../utils/agent-session'
 import { isPersonalSessionKey } from '../personal-session-model.mjs'
 import { relativeSince } from '../agent-session-recent.mjs'
@@ -31,7 +32,8 @@ const UNATTRIBUTED_TITLES: Record<'adapter' | 'endpoint' | 'conversation', strin
 const SOURCE_ICONS: Record<RecordSourceId, LucideIcon> = { sessions: MessagesSquare, replay: BrainCircuit, logs: FileText, audit: Activity }
 const ASSOCIATION_VARIANT: Record<RecordAssociation, 'warning' | 'outline' | 'secondary'> = { exact: 'outline', partial: 'warning', text: 'outline', all: 'secondary' }
 
-type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | ({ status: 'ready' } & ScopeSessionRecords)
+/** `off`: the trace archive needs the Agent and the instance has none (503), not a failed read (zhinjs/zhin#1250). */
+type SessionsState = { status: 'loading' } | { status: 'error'; error: unknown } | { status: 'off'; reply: { status: number; body: unknown } } | ({ status: 'ready' } & ScopeSessionRecords)
 
 /**
  * Sessions of the scope, newest first: matched by the origin the Host recorded, else by an old-style
@@ -45,7 +47,12 @@ function useScopeSessions(scope: Scope): SessionsState {
     setState({ status: 'loading' })
     apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
       .then(async (response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        if (!response.ok) {
+          const body: unknown = await response.json().catch(() => null)
+          const reply = { status: response.status, body }
+          if (featureUnavailableState(reply)) { if (active) setState({ status: 'off', reply }); return }
+          throw new Error(`HTTP ${response.status}`)
+        }
         const body: unknown = await response.json()
         if (active) setState({ status: 'ready', ...scopeSessionRecords(body, scope, SESSION_LIMIT) })
       })
@@ -110,23 +117,27 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
       <ObjectSection
         title={i18n.t('聊天记录')}
         description={level === 'conversation' ? i18n.t('这个会话的 Agent 会话：对话、轨迹与分支。') : level === 'global' ? i18n.t('最近活跃的 Agent 会话。') : i18n.t('属于这个范围的 Agent 会话，按记录的来源或会话标识匹配。')}
-        actions={<Button asChild variant="outline" size="sm"><Link to={sessionsLink.href}><ArrowUpRight />{i18n.t('在聊天记录中打开')}</Link></Button>}
+        actions={<Button asChild variant="secondary" size="sm"><Link to={sessionsLink.href}><ArrowUpRight />{i18n.t('在聊天记录中打开')}</Link></Button>}
       >
         <Card className="overflow-hidden p-0">
           {sessions.status === 'loading' ? (
             <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
+          ) : sessions.status === 'off' ? (
+            <StatusState compact kind="empty" illustration="messages" title={i18n.t('Agent 会话记录未启用')}
+              description={featureUnavailableState(sessions.reply, i18n.locale)?.description}
+              actions={<Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.ai}>{i18n.t('打开 AI 与模型')}</Link></Button>} />
           ) : sessions.status === 'error' ? (
             <StatusState compact error={sessions.error} permissions={['status.view']} />
           ) : sessions.state === 'unattributed' ? (
             <StatusState compact kind="empty" illustration="messages" title={i18n.t(UNATTRIBUTED_TITLES[level === 'global' ? 'endpoint' : level])}
               description={i18n.t('现在的会话记录没有写明来自哪个账号（需要更新的 Host），{0} 个会话无法确定是否属于这里。可以在「会话 → 聊天记录」查看全部会话。', [sessions.unattributed])}
-              actions={<Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.agentSessions}>{i18n.t('查看全部会话')}</Link></Button>} />
+              actions={<Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.agentSessions}>{i18n.t('查看全部会话')}</Link></Button>} />
           ) : sessions.rows.length === 0 ? (
             <StatusState compact kind="empty" illustration="messages" title={i18n.t('还没有聊天记录')}
               description={i18n.t('机器人在这个范围里处理过消息后，会话会出现在这里。')}
               actions={level === 'endpoint' || level === 'conversation'
-                ? <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
-                : <Button asChild size="sm" variant="outline"><Link to={scopeHref(scope)}>{i18n.t('查看聊天账号')}</Link></Button>} />
+                ? <Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope, 'chat')}>{i18n.t('打开聊天')}</Link></Button>
+                : <Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope)}>{i18n.t('查看聊天账号')}</Link></Button>} />
           ) : (
             <>
               <ul className="console-records-sessions">
@@ -162,7 +173,7 @@ export function ScopeRecordsPanel({ scope }: { scope: Scope }) {
                   <p className="console-records-source-description">{i18n.t(copy.description)}</p>
                   <p className="console-records-source-note">{i18n.t(source.note)}</p>
                   {source.filter ? <p className="console-records-source-filter"><span className="shrink-0 whitespace-nowrap">{i18n.t('筛选：')}</span><code title={source.filter}>{source.filter}</code></p> : null}
-                  <Button asChild variant="outline" size="sm" className="console-records-source-open">
+                  <Button asChild variant="secondary" size="sm" className="console-records-source-open">
                     <Link to={source.href}>{i18n.t('打开{0}', [i18n.t(copy.title)])}<ArrowUpRight /></Link>
                   </Button>
                 </Card>

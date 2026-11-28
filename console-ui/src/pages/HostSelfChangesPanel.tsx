@@ -236,12 +236,12 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
       {skipped.length > 0 && <p className="text-xs text-warning break-all">{i18n.t('试跑跳过：')}{skipped.join('，')}</p>}
       {change.error && <p className="text-xs text-destructive break-all">{change.error}</p>}
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={denied || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('查看完整 diff')}</Button>
+        <Button size="sm" variant="secondary" disabled={denied || !current || detailLoading} onClick={() => void loadDetail(change)}>{i18n.t('查看完整 diff')}</Button>
         {actions === 'pending' && <>
           <Button size="sm" disabled={disabled} onClick={() => prepare(change, 'approve')}>{i18n.t('批准变更')}</Button>
-          <Button size="sm" variant="outline" disabled={disabled} onClick={() => prepare(change, 'reject')}>{i18n.t('驳回变更')}</Button>
+          <Button size="sm" variant="secondary" disabled={disabled} onClick={() => prepare(change, 'reject')}>{i18n.t('驳回变更')}</Button>
         </>}
-        {actions === 'failed' && <Button size="sm" variant="outline" disabled={disabled} onClick={() => prepare(change, 'handled')}>{i18n.t('标记已处理')}</Button>}
+        {actions === 'failed' && <Button size="sm" variant="secondary" disabled={disabled} onClick={() => prepare(change, 'handled')}>{i18n.t('标记已处理')}</Button>}
       </div>
       {detailId === change.id && <SelfChangeDetailView detail={detail} loading={detailLoading} error={detailError} onClose={closeDetail} />}
     </article>
@@ -250,7 +250,7 @@ export function HostSelfChangeSession({ scope }: { scope?: string }) {
   return <Card id="self-changes">
     <CardHeader className="flex-row items-center justify-between gap-3">
       <CardTitle>{i18n.t('自我变更审批')}</CardTitle>
-      <Button variant="outline" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新自我变更')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+      <Button variant="secondary" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新自我变更')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
     </CardHeader>
     <CardContent className="space-y-3">
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}

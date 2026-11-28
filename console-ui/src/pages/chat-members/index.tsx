@@ -66,7 +66,7 @@ export default function ChatMembersPage() {
     <PageShell>
       <PageHeader title={i18n.t('聊天成员')}
         description={i18n.t('聊天里的「人」：一个人可以有多个平台身份，角色授予属于人。在这里核对身份、归并同一个人在不同平台的账号，或拆分误归并的身份。')}
-        actions={<Button variant="outline" size="sm" onClick={load} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>} />
+        actions={<Button variant="secondary" size="sm" onClick={load} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>} />
       <MyChatIdentitySection highlight={params.get('me') === '1'} />
       <ObjectSection title={i18n.t('全部成员')} description={i18n.t('有全局 iam.manage 时列出全部成员；只在部分适配器上有 iam.manage 时，只列出这些适配器上的身份，同一个人在其他适配器上的身份只显示数量。')}>
         {state.status === 'unsupported' ? <StatusState kind="unsupported" description={i18n.t('当前 Host 还没有「聊天成员」（chat-principals.*），升级后可在这里管理。')} />
@@ -78,7 +78,7 @@ export default function ChatMembersPage() {
                 <Alert variant="warning" role="status">
                   <AlertDescription className="flex flex-wrap items-center gap-2">
                     <span>{i18n.t('无法读取这些适配器上的成员：{0}。其他适配器的成员照常列出。', [state.failedAdapters.join(i18n.t('、'))])}</span>
-                    <Button variant="outline" size="sm" onClick={load}><RefreshCw />{i18n.t('重试')}</Button>
+                    <Button variant="secondary" size="sm" onClick={load}><RefreshCw />{i18n.t('重试')}</Button>
                   </AlertDescription>
                 </Alert>
               ) : null}
@@ -149,8 +149,8 @@ function MemberCard({ principal, manage, globalManage, onEdit }: {
       </div>
       {actions.rename || actions.merge || actions.needsGlobal ? (
         <div className="console-chat-member-actions">
-          {actions.rename ? <Button variant="outline" size="sm" onClick={() => onEdit({ kind: 'rename', principal })}><Pencil />{i18n.t('改名')}</Button> : null}
-          {actions.merge ? <Button variant="outline" size="sm" onClick={() => onEdit({ kind: 'merge', principal })}><GitMerge />{i18n.t('归并另一个人…')}</Button> : null}
+          {actions.rename ? <Button variant="secondary" size="sm" onClick={() => onEdit({ kind: 'rename', principal })}><Pencil />{i18n.t('改名')}</Button> : null}
+          {actions.merge ? <Button variant="secondary" size="sm" onClick={() => onEdit({ kind: 'merge', principal })}><GitMerge />{i18n.t('归并另一个人…')}</Button> : null}
           {actions.needsGlobal ? <span className="console-admin-note"><ShieldAlert aria-hidden="true" />{i18n.t('持有全局角色：改名、归并或拆分需要全局 iam.manage')}</span> : null}
         </div>
       ) : null}
@@ -214,7 +214,7 @@ function EditDialog({ editing, principals, onClose, onDone }: {
         ) : null}
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={busy}>{i18n.t('取消')}</Button>
+          <Button variant="secondary" onClick={onClose} disabled={busy}>{i18n.t('取消')}</Button>
           <Button onClick={() => { void submit() }} disabled={busy || (editing.kind === 'merge' && !from)}>
             {editing.kind === 'rename' ? i18n.t('保存') : editing.kind === 'split' ? i18n.t('拆分') : i18n.t('归并')}
           </Button>

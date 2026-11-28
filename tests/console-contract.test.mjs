@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import test from 'node:test'
 
@@ -213,29 +213,28 @@ test('the shared shell adapts across PC, Pad and Phone widths', () => {
 
   assert.match(layout, /console-content-frame/)
   assert.doesNotMatch(layout, /max-w-7xl/)
-  // Content and the top bar share one 1440px column.
-  assert.match(design, /--console-content-max: 90rem/)
+  // Content and the top bar share one column: the library's `data` width, 1280px (console-ui 1.3.0),
+  // with the library's page padding (16 / 24 / 32). The Console no longer pins 90rem.
+  assert.doesNotMatch(design, /--console-content-max:/)
+  assert.doesNotMatch(design, /90rem|120rem/)
   assert.match(design, /\.console-content-frame \{\s*max-width: var\(--console-content-max\)/)
-  assert.match(design, /@media \(width >= 48rem\) and \(width < 64rem\)/)
-  assert.match(design, /@media \(width >= 90rem\)/)
+  assert.match(layout, /console-topnav-bar console-content-frame/)
+  const shell = sourceText(join(SOURCE_ROOT, 'shell.css'))
+  assert.match(shell, /padding-inline: var\(--console-page-padding-inline\)/)
+  assert.match(shell, /@media \(width < 64rem\)/)
+  assert.match(shell, /@media \(width < 48rem\)/)
   assert.match(grids, /2xl:grid-cols-4/)
 })
 
-test('remote Agent playground styles are retained by the Tailwind source scanner', () => {
-  const source = sourceText(join(SOURCE_ROOT, 'agent-playground.css'))
-  const contract = sourceText(join(SOURCE_ROOT, 'remote-entry-style-contract.ts'))
+test('the Sandbox playground ships its own styles: the Console keeps no copy (adapter-sandbox >= 1.2.0)', () => {
+  // @zhin.js/adapter-sandbox 1.2.0 styles its remote Entry itself (console-ui components), so the
+  // Console's copy of the old Agent playground stylesheet and its Tailwind class contract are gone.
+  assert.equal(existsSync(join(SOURCE_ROOT, 'agent-playground.css')), false)
+  assert.equal(existsSync(join(SOURCE_ROOT, 'remote-entry-style-contract.ts')), false)
   const clientStyles = sourceText(join(ROOT, 'client', 'style.css'))
-  const playgroundClasses = new Set(
-    [...source.matchAll(/\.((?:agent-playground)[A-Za-z0-9_-]*)/g)].map((match) => match[1]),
-  )
-  const retainedClasses = new Set(
-    [...contract.matchAll(/['"]((?:agent-playground)[A-Za-z0-9_-]*)['"]/g)].map((match) => match[1]),
-  )
-  const missing = [...playgroundClasses].filter((className) => !retainedClasses.has(className))
-
-  assert.ok(playgroundClasses.size > 50, 'expected the complete remote Agent playground style contract')
-  assert.deepEqual(missing, [])
-  assert.match(clientStyles, /@import "\.\.\/console-ui\/src\/agent-playground\.css";/)
+  assert.doesNotMatch(clientStyles, /agent-playground/)
+  const readme = sourceText(join(ROOT, 'README.md'))
+  assert.match(readme, /@zhin\.js\/adapter-sandbox[^\n]*1\.2\.0/)
 })
 
 test('Console shell only consumes public route metadata', () => {
@@ -408,12 +407,13 @@ test('package manifest targets the released Zhin contract generation', () => {
   const manifest = JSON.parse(sourceText(join(ROOT, 'package.json')))
   // One SDK generation (zhin 1.11): the tilde ranges keep npm from resolving the unrelated client 2.x line
   // or a later minor that has not been checked against this Console.
-  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.5.1')
+  // client 1.5.2 depends exactly on console-ui 1.3.0 (one console-ui in the lockfile).
+  assert.equal(manifest.dependencies['@zhin.js/client'], '~1.5.2')
   assert.equal(manifest.dependencies['@zhin.js/contract'], '~1.1.34')
   assert.equal(manifest.dependencies['@zhin.js/ai'], '~1.9.1')
   assert.equal(manifest.dependencies['@zhin.js/console-protocol'], '~1.10.0')
-  // The component library (ADR 0063 P1a); 1.1 (ADR 0063 color roles, primary / destructive-solid, EmptyState illustrations) is taken deliberately.
-  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.2.1')
+  // The component library (ADR 0063 P1a); 1.3 (「柔光卡片」, D34–D41) is taken deliberately.
+  assert.equal(manifest.dependencies['@zhin.js/console-ui'], '~1.3.0')
   for (const [name, range] of Object.entries(manifest.dependencies)) {
     if (name.startsWith('@zhin.js/')) assert.match(range, /^~\d+\.\d+\.\d+$/, `${name} uses a tilde range`)
   }

@@ -79,7 +79,7 @@ export function Profiles({ management: m, onCreateAccount, addModelFor, onAddMod
                       label={profile.label ?? profile.model}
                       support={profileSupport(view, profile)}
                     />
-                    {chat ? <span className="inline-flex items-center rounded-full border border-[hsl(var(--primary-action-border))] bg-[hsl(var(--primary-action))] px-2 text-[length:var(--console-text-label)] font-medium leading-5 text-[hsl(var(--primary-action-foreground))]" title={chat.title ?? undefined}>{chat.label}</span> : null}
+                    {chat ? <span className="inline-flex items-center rounded-full bg-tint-3 px-3 text-sm font-medium leading-6 text-ink" title={chat.title ?? undefined}>{chat.label}</span> : null}
                   </p>
                   <p className="text-sm text-muted-foreground break-all">
                     {profile.model} · {account.label ?? account.id}
@@ -378,7 +378,7 @@ function ProfileForm({
                 {manualEntry ? i18n.t("从目录选择") : i18n.t("输入模型 ID")}
               </Button> : null}
               {driver?.discovery === true ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => void discover()}>
+                <Button type="button" variant="secondary" size="sm" onClick={() => void discover()}>
                   <RefreshCw />
                   {i18n.t("从服务读取模型")}
                 </Button>
@@ -415,7 +415,7 @@ function ProfileForm({
             <ErrorAlert error={schemaError} />
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => void readSchema()}
             >
               {i18n.t("重新读取参数")}

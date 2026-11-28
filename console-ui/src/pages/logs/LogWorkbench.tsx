@@ -152,7 +152,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
       <div className="console-log-toolbar">
         <div className="relative min-w-0 flex-1 sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input type="search" aria-label={i18n.t("搜索日志消息或来源")} placeholder={i18n.t("搜索消息、来源…")} value={state.query} onChange={(event) => actions.changeQuery(event.target.value)} className="pl-9" />
+          <Input type="search" aria-label={i18n.t("搜索日志消息或来源")} placeholder={i18n.t("搜索消息、来源…")} value={state.query} onChange={(event) => actions.changeQuery(event.target.value)} className="pl-10" />
         </div>
         <SelectField value={state.level} onValueChange={actions.selectLevel} className="w-32" aria-label={i18n.t("日志级别")}
           options={[{ value: 'all', label: i18n.t("所有级别") }, ...['debug', 'info', 'warn', 'error'].map(value => ({ value, label: LEVEL_META[value as KnownLogLevel].label }))]} />
@@ -162,7 +162,7 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
         </label>
         <div className="console-log-toolbar-actions">
           <Button variant="ghost" size="sm" onClick={actions.refresh}><RefreshCw />{i18n.t("刷新")}</Button>
-          <Button variant="outline" size="sm" aria-expanded={sourcesOpen} aria-controls="log-source-directory" onClick={() => setSourcesOpen(open => !open)}><Filter />{state.source ? i18n.t("来源：{0}", [state.source]) : i18n.t("来源筛选")}</Button>
+          <Button variant="secondary" size="sm" aria-expanded={sourcesOpen} aria-controls="log-source-directory" onClick={() => setSourcesOpen(open => !open)}><Filter />{state.source ? i18n.t("来源：{0}", [state.source]) : i18n.t("来源筛选")}</Button>
           {!state.readOnly ? <DropdownMenu>
             <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" disabled={!state.canManage} aria-label={i18n.t("日志维护操作")}><MoreHorizontal />{i18n.t("维护")}</Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -219,11 +219,11 @@ export function LogWorkbench({ state, actions, endRef }: LogWorkbenchProps) {
             )}
           </div>
           <nav className="console-log-pagination" aria-label={i18n.t("日志历史分页")}>
-            <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page <= 1} onClick={()=>actions.changePage(state.page-1)}>{i18n.t("上一页")}</Button>
+            <Button variant="secondary" size="sm" disabled={state.loading || !state.logsKnown || state.page <= 1} onClick={()=>actions.changePage(state.page-1)}>{i18n.t("上一页")}</Button>
             <span className="console-log-page-summary" aria-live="polite">{state.logsKnown ? i18n.t("第 {0} / {1} 页 · 筛选结果 {2} 条", [state.page, state.totalPages, state.total]) : i18n.t("分页总数暂时未知")}</span>
             <SelectField aria-label={i18n.t("每页日志条数")} value={String(state.pageSize)} onValueChange={value => actions.changePageSize(Number(value))}
               options={[50, 100, 200].map(size => ({ value: String(size), label: <>{i18n.t("每页 ")}{size} {i18n.t(" 条")}</> }))} />
-            <Button variant="outline" size="sm" disabled={state.loading || !state.logsKnown || state.page >= (state.totalPages ?? 1)} onClick={()=>actions.changePage(state.page+1)}>{i18n.t("下一页")}</Button>
+            <Button variant="secondary" size="sm" disabled={state.loading || !state.logsKnown || state.page >= (state.totalPages ?? 1)} onClick={()=>actions.changePage(state.page+1)}>{i18n.t("下一页")}</Button>
           </nav>
         </section>
 
@@ -263,7 +263,7 @@ export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: L
       <div className="console-log-inspector-actions">
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={async () => {
             try {
               await navigator.clipboard.writeText(line)
@@ -273,7 +273,7 @@ export function LogInspector({ log, offPage, onFilterSource, onClose }: { log: L
             }
           }}
         ><Copy />{copyState === 'copied' ? i18n.t("已复制") : i18n.t("复制事件")}</Button>
-        {log.source ? <Button size="sm" variant="outline" onClick={() => onFilterSource(log.source)}><Filter />{i18n.t("仅看此来源")}</Button> : null}
+        {log.source ? <Button size="sm" variant="secondary" onClick={() => onFilterSource(log.source)}><Filter />{i18n.t("仅看此来源")}</Button> : null}
         <Button size="sm" variant="ghost" asChild><Link to={`/introspection?tab=commands&filter=${runtimeFilter}`}>{i18n.t("在能力目录中搜索来源名称")}<ArrowRight /></Link></Button>
       </div>
       {copyState === 'failed' ? <p className="console-log-copy-error" role="status">{i18n.t("浏览器拒绝了剪贴板访问，请展开原始事件后手动复制。")}</p> : null}

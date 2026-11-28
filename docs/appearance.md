@@ -2,44 +2,50 @@
 
 主题只改变当前浏览器的呈现，不修改 Host、Bot 配置或消息内容。
 
-## 验收截图
+## 柔光卡片
 
-- [暖阳 · 桌面工作区](assets/appearance-sunshine-desktop.jpg)
-- [蜜桃 · 手机分组选择面板](assets/appearance-peach-mobile.jpg)
-- [松青 · 早期手机外观面板](assets/appearance-pine-mobile.jpg)
-- [暮紫 · 桌面暗色工作区](assets/appearance-plum-desktop.jpg)
+颜色、字号、圆角、阴影与动效全部来自 `@zhin.js/console-ui` 1.3.0 的「柔光卡片」规范（zhinjs/zhin ADR 0063 D34–D41）：黑白主色、暖灰底色、五组浅色类别色、大圆角无描边卡片、胶囊按钮。Console 不再有自己的调色板，也不再提供配色选择；`data-palette` 不再写入。
 
-截图使用本地模拟数据，不连接真实平台或模型。全部 786 项测试、类型检查、生产构建通过；十六种亮暗组合的文字、按钮和焦点对比度均通过校验。浏览器验证了四套鲜活配色的实际按钮填充、深浅切换、刷新保留、375px 无溢出，以及 320×568 短屏面板可滚动且能触达默认恢复按钮。
+类别色按「类别对应表」固定（同一个东西在所有页面颜色一样）：
 
-## 两个独立选择
+| 组 | 浅彩 / 图标色 | 用在 |
+| --- | --- | --- |
+| 1 | 杏 / 珊瑚 | 聊天账号、适配器 |
+| 2 | 粉 / 玫红 | 插件 |
+| 3 | 黄绿 / 橄榄 | 模型、Agent |
+| 4 | 薄荷 / 青绿 | 会话、消息 |
+| 5 | 奶黄 / 芥黄 | 定时任务、时间 |
+| 中性 | sunken / ink | 实例、运维、访问控制 |
 
-点击顶栏主题按钮打开外观面板：
+图表：消息量「收到」用 `chart-1`（杏），「回复」用 `chart-2`（孔雀青）；状态（正常 / 失败）只用 `ok` / `danger`，不用图表色。
 
-- 显示模式：亮色、暗色、跟随系统。跟随系统会持续响应系统变化，不将当前系统模式保存成手动选择。
-- 鲜活配色：晴空、蜜桃、暖阳、薄荷。用更高彩度的淡色工作区、明亮按钮和有色聊天气泡，适合偏好清爽、温暖或活力界面的用户。
-- 沉静配色：松青（默认）、海蓝、暮紫、石墨，保留既有选择。石墨保持中性表面。
-- 配色覆盖工作区底色、导航、选中态、聊天气泡、主要按钮与键盘焦点。八套配色都有对应暗色模式；主题面板分组显示，短屏可滚动。
+## 显示模式
 
-每套配色都单独定义亮暗层次。鲜活主题使用 `--primary-action` / `--primary-action-foreground` 表示明亮按钮填充及其文字；`--primary` 保持为可读的链接与焦点色，避免亮黄、薄荷按钮与文字共用同一个色值。成功、警告、危险及图表类别颜色不随装饰配色变更，避免语义漂移。所有组合的文字、输入边界与焦点对比度由测试校验。
+用户菜单（顶栏右侧的圆形账号按钮）里的「显示模式」有三项：
+
+- 浅色：`<html class="light">`，不写 `data-theme`（组件库什么都不写时就是浅色）。
+- 深色：`<html class="dark">`。
+- 跟随系统（默认）：`<html data-theme="system">`，由组件库的 `prefers-color-scheme` 规则选择浅色或深色；同时写入解析后的 `.light` / `.dark` 类，供 Console 自己的 `.dark` 规则和 Tailwind 的 `dark:` 使用，并随系统变化更新。
+
+浏览器主题色（`<meta name="theme-color">`）固定为浅色 `#F7F5F3`、深色 `#121010`。
 
 ## 偏好与兼容
 
-- 仅保存两个经过枚举校验的标量：`theme`（`light` / `dark` / `system`）、`zhin.console.palette`（八种配色 ID）。
-- 已有 `theme=light/dark` 选择保留。没有选择时默认为跟随系统与松青。
+- 只保存一个经过枚举校验的标量：`theme`（`light` / `dark` / `system`）。已有选择保留；没有选择时跟随系统。
+- 旧版本保存的配色 `zhin.console.palette` 不再读取，首次加载时删除。
 - 无效值回到默认设置；浏览器阻止存储时，本次页面仍可即时切换。
-- 同一浏览器的其他 Console 标签页会同步偏好；清除偏好恢复默认。
-- “恢复默认外观”同时恢复跟随系统与松青，不修改其他浏览器数据。
+- 同一浏览器的其他 Console 标签页会同步偏好。
 
 ## 初始化与样式边界
 
-`client/index.html` 的早期脚本在应用和样式绘制前设置模式和配色属性，避免先闪现错误主题。运行时继续监听系统与跨标签页变化，更新浏览器主题色。两套 Console 入口共用 CSS 变量；旧版本曾写入的 inline 主题变量仅按已知名单清除，不删除扩展自己的样式。
+`client/index.html` 的早期脚本在应用和样式绘制前设置模式，避免先闪现错误主题。运行时继续监听系统与跨标签页变化。旧版本曾写入的 inline 主题变量仅按已知名单清除，不删除扩展自己的样式。
 
 关键文件：
 
 - `console-ui/src/theme/index.ts`：偏好校验、模式解析、监听与通知。
-- `console-ui/src/theme-tokens.css`：完整亮暗配色和稳定语义色。
+- `console-ui/src/theme-tokens.css`：组件库没有的几个旧名字，全部指向组件库的令牌。
 - `console-ui/src/hooks/useTheme.ts`：统一订阅，多个控件不产生独立主题状态。
-- `console-ui/src/components/ThemeToggle.tsx`：可键盘操作的原生单选组和外观面板。
+- `console-ui/src/components/UserMenu.tsx`：显示模式的单选菜单项。
 - `tests/theme-runtime.test.mjs`：迁移、系统变化、存储失败、跨标签同步、早期脚本。
-- `tests/visual-foundation.test.mjs`：全部十六种亮暗配色的对比度、鲜活填充与可读文本角色、语义色稳定性。
-- `tests/theme-controls.test.mjs`：独立选择、文案与默认恢复。
+- `tests/visual-foundation.test.mjs`：浅色 / 深色的对比度与颜色角色。
+- `tests/theme-controls.test.mjs`：三种显示模式。

@@ -30,8 +30,10 @@ test('below 48rem the hit area is at least the 44px touch target; the row keeps 
   assert.equal(decls['min-height'], 'var(--console-touch-target)')
   const base = css.nodes.find(node => node.type === 'rule' && node.selector === '.console-feature-switch-hit')
   assert.match(base.toString(), /align-items: center; justify-content: center/, 'the switch is centred in its hit area')
-  const designSystem = readFileSync(new URL('../console-ui/src/design-system.css', import.meta.url), 'utf8')
-  assert.match(designSystem, /--console-touch-target: 2\.75rem;/)
+  // The touch target is the library's token (console-ui 1.3.0), 44px; the Console no longer redefines it.
+  const tokens = readFileSync(new URL('../node_modules/@zhin.js/console-ui/dist/tokens.css', import.meta.url), 'utf8')
+  assert.match(tokens, /--console-touch-target: 2\.75rem;/)
+  assert.doesNotMatch(readFileSync(new URL('../console-ui/src/design-system.css', import.meta.url), 'utf8'), /--console-touch-target:/)
   // Column gap of the row head (name link | switch) is space-3 = 12px, above the 8px the issue asks for.
   const head = css.nodes.find(node => node.type === 'rule' && node.selector === '.console-feature-row-head')
   assert.match(head.toString(), /gap: var\(--console-space-2\) var\(--console-space-3\)/)

@@ -235,7 +235,7 @@ export function DeclarePluginDialog({ need, onClose, onDeclared, onBusyChange }:
           {running || transaction.progress.id || transaction.error
             ? <TransactionProgress progress={transaction.progress} running={running} error={transaction.error} /> : null}
           <DialogFooter>
-            <DialogClose asChild><Button type="button" variant="outline" size="sm" disabled={running}>{i18n.t("取消")}</Button></DialogClose>
+            <DialogClose asChild><Button type="button" variant="secondary" size="sm" disabled={running}>{i18n.t("取消")}</Button></DialogClose>
             <Button type="submit" size="sm" disabled={running || schemaState.status === 'loading' || Boolean(keyProblem)}>
               {running ? i18n.t("正在声明…") : i18n.t("保存并启用")}
             </Button>

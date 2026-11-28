@@ -136,7 +136,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
   return <Card id="tool-approvals">
     <CardHeader className="flex-row items-center justify-between gap-3">
       <CardTitle>{i18n.t('Host 工具审批')}</CardTitle>
-      <Button variant="outline" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新工具审批')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+      <Button variant="secondary" size="sm" disabled={denied || !current || loading || busy} onClick={() => void refresh()} aria-label={i18n.t('刷新工具审批')}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
     </CardHeader>
     <CardContent className="space-y-3">
       {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
@@ -150,7 +150,7 @@ export function HostToolApprovalSession({ scope }: { scope?: string }) {
         <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-medium break-all">{card.toolName}</h3><time className="text-xs text-muted-foreground">{i18n.t('有效期至 {0}', [new Date(card.expiresAt).toLocaleString(i18n.locale)])}</time></div>
         <p className="text-xs text-muted-foreground break-all">{i18n.t('发起会话：')}<span title={card.sessionKey}>{sessionLabel(card, i18n.locale)}</span>{card.requesterId && <> · {i18n.t('发起人：')}{card.requesterId}</>}</p>
         <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/40 p-3 text-xs">{JSON.stringify(card.args, null, 2)}</pre>
-        <div className="flex gap-2"><Button size="sm" disabled={disabled} onClick={() => prepare(card, 'approve')}>{i18n.t('批准一次')}</Button><Button size="sm" variant="outline" disabled={disabled} onClick={() => prepare(card, 'deny')}>{i18n.t('拒绝')}</Button></div>
+        <div className="flex gap-2"><Button size="sm" disabled={disabled} onClick={() => prepare(card, 'approve')}>{i18n.t('批准一次')}</Button><Button size="sm" variant="secondary" disabled={disabled} onClick={() => prepare(card, 'deny')}>{i18n.t('拒绝')}</Button></div>
       </article>)}
       <ConfirmDialog open={Boolean(review && current)} onOpenChange={open => {
         const active = owner.current

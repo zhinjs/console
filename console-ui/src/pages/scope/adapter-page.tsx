@@ -36,7 +36,7 @@ export function AdapterObjectPage({ scope }: { scope: Scope & { level: 'adapter'
       icon={Cable}
       platform={platform !== scope.adapter ? i18n.t(platform) : undefined}
       status={data.loaded ? <Badge variant={online < accounts.length ? 'warning' : 'outline'}>{i18n.t('{0} / {1} 在线', [online, accounts.length])}</Badge> : null}
-      actions={<Button variant="outline" size="sm" onClick={refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}
       panels={{
         // One account state for the table rows (status, switch, 编辑 / 删除) and 「管理连接」 (add form,
         // editor); without the right to manage connections the provider is a no-op and 「管理连接」 keeps the SDK's cards.
@@ -78,7 +78,7 @@ function ConnectionManagement({ adapter, refreshKey }: { adapter: string; refres
   }, [editing])
   const toolbar = ({ docsUrl, add }: AdapterConsoleToolbarControls) => (docsUrl || add) ? (
     <div className="console-adapter-console-toolbar">
-      {docsUrl ? <Button asChild variant="outline" size="sm"><a href={docsUrl} target="_blank" rel="noreferrer"><BookOpen />{i18n.t('文档')}</a></Button> : null}
+      {docsUrl ? <Button asChild variant="secondary" size="sm"><a href={docsUrl} target="_blank" rel="noreferrer"><BookOpen />{i18n.t('文档')}</a></Button> : null}
       {add ? (
         <Button size="sm" variant={add.open ? 'outline' : 'soft'} disabled={add.disabled} aria-expanded={add.open} aria-controls={add.controls} onClick={add.toggle}>
           {add.open ? <X /> : <Plus />}{add.open ? i18n.t('取消') : i18n.t('添加账号')}

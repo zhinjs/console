@@ -10,7 +10,6 @@ import * as jsxRuntime from 'react/jsx-runtime'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { hslTokens } from './helpers/token-cascade.mjs'
-import { THEME_PALETTES } from '../console-ui/src/theme/index.ts'
 import * as ambientModel from '../console-ui/src/pages/ambient-engagement-model.mjs'
 import * as liveStatus from '../console-ui/src/components/PluginConfigForm/config-live-status.mjs'
 import * as readError from '../console-ui/src/utils/read-error.mjs'
@@ -264,10 +263,10 @@ test('M3: the MCP card icon takes the row state, like its badge; the idle ring k
     return (k < 1 ? [c, x, 0] : k < 2 ? [x, c, 0] : k < 3 ? [0, c, x] : k < 4 ? [0, x, c] : k < 5 ? [x, 0, c] : [c, 0, x]).map(v => v + m)
   }
   const lum = v => v.map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0)
-  for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
-    const tokens = hslTokens(palette.id, dark)
+  for (const dark of [false, true]) {
+    const tokens = hslTokens(dark)
     const [a, b] = [lum(rgb(tokens['muted-foreground'])), lum(rgb(tokens.card))]
     const ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05)
-    assert.ok(ratio >= 3, `${palette.id}/${dark ? 'dark' : 'light'}: idle ring ${ratio.toFixed(2)}`)
+    assert.ok(ratio >= 3, `${dark ? 'dark' : 'light'}: idle ring ${ratio.toFixed(2)}`)
   }
 })

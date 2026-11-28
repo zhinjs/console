@@ -94,7 +94,6 @@ export const scopeMessages = Object.freeze({
   "还没有聊天账号。选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。": "There are no chat accounts yet. Pick a platform and add an account on its adapter page: enter a token or scan a QR code.",
   "选择平台，在它的适配器页面添加账号、填写 Token 或扫码登录。": "Pick a platform and add an account on its adapter page: enter a token or scan a QR code.",
   "{0} 条": "{0}",
-  "这些账号需要扫码或验证后才能上线。在账号的「接入」页签完成。": "These accounts need a QR scan or verification before they come online. Complete it in the account's Connection tab.",
   "刷新失败，下面是上一次读取的内容。": "Refreshing failed; below is what was read last.",
   "每个适配器一页：账号、连接管理与功能覆盖。": "One page per adapter: accounts, connection management and feature overrides.",
   "还没有运行中的适配器": "No adapter is running",

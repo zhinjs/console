@@ -1,19 +1,38 @@
 @import "tailwindcss";
 @config "./tailwind.config.js";
 @import "../console-ui/src/design-system.css";
-@import "../console-ui/src/agent-playground.css";
 @import "../console-ui/src/settings.css";
 @import "../console-ui/src/pages/resource-pages.css";
 @import "../console-ui/src/im-workspace.css";
 @import "../console-ui/src/markdown-content.css";
 
-/* Tailwind's `text-xs` is the Console caption size (13px): secondary text never drops to 12px. */
+/*
+ * Tailwind's type keys follow the component library's 8-step scale (console-ui 1.3.0, 「柔光卡片」):
+ * xs 12 · sm 13 · md 14 · lg 15 · xl 17 · 2xl 22 · title 26 · display 32. The library's own classes
+ * are generated here as well (tailwind.config.js scans its dist), so the two must agree.
+ */
 @theme {
   /* Tailwind's font-sans / font-mono follow the Console stacks (self-hosted Inter / JetBrains Mono). */
   --font-sans: var(--console-font-sans);
   --font-mono: var(--console-font-mono);
-  --text-xs: 0.8125rem;
-  --text-xs--line-height: 1.25rem;
+  --text-xs: var(--console-text-xs);
+  --text-xs--line-height: var(--console-leading-xs);
+  --text-sm: var(--console-text-sm);
+  --text-sm--line-height: var(--console-leading-sm);
+  --text-md: var(--console-text-md);
+  --text-md--line-height: var(--console-leading-md);
+  --text-base: var(--console-text-md);
+  --text-base--line-height: var(--console-leading-md);
+  --text-lg: var(--console-text-lg);
+  --text-lg--line-height: var(--console-leading-lg);
+  --text-xl: var(--console-text-xl);
+  --text-xl--line-height: var(--console-leading-xl);
+  --text-2xl: var(--console-text-2xl);
+  --text-2xl--line-height: var(--console-leading-2xl);
+  --text-title: var(--console-text-title);
+  --text-title--line-height: var(--console-leading-title);
+  --text-display: var(--console-text-display);
+  --text-display--line-height: var(--console-leading-display);
 }
 
 /* ============================================

@@ -47,7 +47,7 @@ function GlobalConfigFrame({ plugin, title, children }: { plugin: string; title:
       <PageHeader
         title={title}
         description={i18n.t("全局配置：对所有适配器和账号生效，除非下级另有覆盖。")}
-        actions={<Button asChild variant="outline" size="sm"><Link to={`/plugins/${encodeURIComponent(plugin)}`}><Package />{i18n.t("插件详情")}</Link></Button>}
+        actions={<Button asChild variant="secondary" size="sm"><Link to={`/plugins/${encodeURIComponent(plugin)}`}><Package />{i18n.t("插件详情")}</Link></Button>}
       />
       <GlobalFeatureSummary plugin={plugin} />
       {children}
@@ -88,7 +88,7 @@ function GlobalFeatureConfig({ plugin, connectionScope }: { plugin: string; conn
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="space-y-2">
             <p>{readErrorSummary(error, i18n.t("配置"), i18n.locale)}</p>
-            <Button variant="outline" size="sm" onClick={reload}>{i18n.t("重试读取")}</Button>
+            <Button variant="secondary" size="sm" onClick={reload}>{i18n.t("重试读取")}</Button>
           </AlertDescription>
         </Alert>
       ) : null}

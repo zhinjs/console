@@ -49,7 +49,7 @@ export function ReadOnlyNotice({ errorKind = null }: { errorKind?: IamErrorKind 
 
 export function FormField({ label, error, hint, children, htmlFor }: { label: string; error?: string | null; hint?: string; children: ReactNode; htmlFor: string }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <label htmlFor={htmlFor} className="block text-sm font-medium">{label}</label>
       {children}
       {hint && !error ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
@@ -108,9 +108,9 @@ export function BindingsEditor({ bindings, roles, onChange, disabled }: {
   return (
     <div className="space-y-3">
       {bindings.length ? (
-        <ul className="space-y-1.5" aria-label={i18n.t("角色绑定")}>
+        <ul className="space-y-2" aria-label={i18n.t("角色绑定")}>
           {bindings.map((binding, index) => (
-            <li key={`${binding.role}-${binding.scope.kind}-${'key' in binding.scope ? binding.scope.key : ''}`} className="flex items-center justify-between gap-2 rounded-md border px-3 py-1.5 text-sm">
+            <li key={`${binding.role}-${binding.scope.kind}-${'key' in binding.scope ? binding.scope.key : ''}`} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">
               <span className="min-w-0 truncate"><RoleName role={binding.role} /> · {scopeLabel(binding.scope, i18n.t)}</span>
               <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => onChange(removeBinding(bindings, index))}
                 aria-label={i18n.t("移除绑定 {0}", [`${binding.role} · ${scopeLabel(binding.scope, i18n.t)}`])}>
@@ -139,7 +139,7 @@ export function BindingsEditor({ bindings, roles, onChange, disabled }: {
           <datalist id={`${id}-suggestions`}>{suggestions.map(value => <option key={value} value={value} />)}</datalist>
         </FormField>
       ) : null}
-      <Button type="button" variant="outline" size="sm" onClick={add} disabled={disabled || !selectedRole}><Plus />{i18n.t("添加绑定")}</Button>
+      <Button type="button" variant="secondary" size="sm" onClick={add} disabled={disabled || !selectedRole}><Plus />{i18n.t("添加绑定")}</Button>
     </div>
   )
 }
@@ -162,7 +162,7 @@ export function PermissionChecklist({ groups, selected, onChange, disabled }: {
         const title = group.kind === 'area' ? areaLabel(group.id, i18n.t) : i18n.t("插件 {0}", [group.id])
         const groupId = `${id}-${group.kind}-${group.id}`
         return (
-          <fieldset key={`${group.kind}:${group.id}`} className="space-y-1.5">
+          <fieldset key={`${group.kind}:${group.id}`} className="space-y-2">
             <legend className="flex items-center gap-2 text-sm font-medium">
               {/* Only in the editor (it has onChange): in the read-only view a ticked group box reads as one more permission. */}
               {onChange ? <Checkbox id={groupId} checked={state} disabled={readOnly} aria-label={i18n.t("全选 {0}", [title])}
@@ -175,7 +175,7 @@ export function PermissionChecklist({ groups, selected, onChange, disabled }: {
                 const checked = selected.includes(item.permission)
                 return (
                   <li key={item.permission} className="flex items-start gap-2 text-sm">
-                    <Checkbox id={itemId} className="mt-0.5" checked={checked} disabled={readOnly}
+                    <Checkbox id={itemId} className="mt-1" checked={checked} disabled={readOnly}
                       onCheckedChange={value => onChange?.(togglePermissions(selected, [item.permission], value === true))} />
                     <label htmlFor={itemId} className="min-w-0">
                       <span className="block">{group.kind === 'area' ? permissionLabel(item.permission, i18n.t) : (item.description || item.permission)}</span>
@@ -219,7 +219,7 @@ export function RolePermissionView({ groups, selected }: { groups: readonly Perm
           {granted.groups.map(group => {
             const title = group.kind === 'area' ? areaLabel(group.id, i18n.t) : i18n.t("插件 {0}", [group.id])
             return (
-              <section key={`${group.kind}:${group.id}`} className="space-y-1.5">
+              <section key={`${group.kind}:${group.id}`} className="space-y-2">
                 <h3 className="text-sm font-medium">{title}</h3>
                 <ul className="grid gap-1 pl-6 sm:grid-cols-2">
                   {group.permissions.map(item => (
@@ -238,7 +238,7 @@ export function RolePermissionView({ groups, selected }: { groups: readonly Perm
       )}
       {/* A granted permission no group lists: shown in both modes, so 「显示全部」 never hides one. */}
       {granted.unlisted.length ? (
-        <section className="space-y-1.5">
+        <section className="space-y-2">
           <h3 className="text-sm font-medium">{i18n.t("其他权限")}</h3>
           <ul className="grid gap-1 pl-6 sm:grid-cols-2">
             {granted.unlisted.map(permission => <li key={permission} className="min-w-0 break-all font-mono text-xs">{permission}</li>)}

@@ -41,7 +41,7 @@ export function ScopeFilterBar({ filter, note, onClear }: { filter: ScopeFilter;
       </div>
       <div className="console-scope-filter-actions">
         <Button asChild variant="ghost" size="sm"><Link to={scopeObjectHref(scope)}>{i18n.t('打开对象页')}<ArrowUpRight /></Link></Button>
-        <Button variant="outline" size="sm" onClick={clear}><X />{i18n.t('清除范围')}</Button>
+        <Button variant="secondary" size="sm" onClick={clear}><X />{i18n.t('清除范围')}</Button>
       </div>
     </div>
   )

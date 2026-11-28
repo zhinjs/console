@@ -18,6 +18,11 @@ export const hostFieldMessages = Object.freeze({
   "没有安装 AI 智能体（@zhin.js/agent）。运行 zhin setup --ai，或在 Console 引导中启用 AI 后可用。": "The AI agent (@zhin.js/agent) is not installed. Run zhin setup --ai, or enable AI in the Console onboarding, to use this.",
   "AI 智能体没有启用。在 Console 引导或配置中启用 AI 后可用。": "The AI agent is not enabled. Enable AI in the Console onboarding or the configuration to use this.",
   "助手没有启用。在配置中设置 assistant.enabled: true 后可用。": "The assistant is not enabled. Set assistant.enabled: true in the configuration to use this.",
+  "这里需要 AI 智能体（@zhin.js/agent），当前实例没有安装或没有启用它。运行 zhin setup --ai，或到「AI 与模型」接入 AI 后可用。": "This needs the AI agent (@zhin.js/agent), which this instance has not installed or enabled. Run zhin setup --ai, or set up AI in AI & models, to use this.",
+  "Workroom 未启用": "Workroom is not enabled",
+  "Agent 会话记录未启用": "Agent session records are not enabled",
+  "AI 智能体未启用": "AI agent not enabled",
+  "最近会话需要 AI 智能体（@zhin.js/agent），当前实例没有安装或没有启用它；下面只显示本机历史。": "Recent sessions need the AI agent (@zhin.js/agent), which this instance has not installed or enabled; only this browser's history is shown below.",
   "此功能没有启用。": "This feature is not enabled.",
   // Usage: prompt cache
   "{0}：最近连续 {1} 次请求（{2} 个会话）没有命中提示缓存，该服务可能不支持或没有透传提示缓存。": "{0}: the last {1} requests in a row ({2} sessions) read nothing from the prompt cache; this service may not support or pass through prompt caching.",
@@ -44,7 +49,6 @@ export const hostFieldMessages = Object.freeze({
   "本项目（{0}）": "This project ({0})",
   "本项目": "This project",
   // Configuration apply status
-  "结果对应当前保存的配置文件。": "These results are for the configuration file as currently saved.",
   "结果来自较早保存的配置文件，不代表当前文件。": "These results are from an earlier save of the configuration file, not the current one.",
   "HTTP 服务": "HTTP server",
   "停用的插件": "Disabled plugins",

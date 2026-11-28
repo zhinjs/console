@@ -37,6 +37,6 @@ function WelcomeFlowContextSession({ instanceKey, kind, scope }: { instanceKey: 
   if (!matched) return null
   return <Card><CardContent className="space-y-3 p-4 text-sm"><p className="font-medium">{i18n.t("群欢迎 · 当前实例 ")}{instanceKey}</p>
     {kind === 'config' ? <><p>{i18n.t("本用途关注 welcomeMessage 与 welcomeConversations。建议先明确设为空范围，再选择精确群。只修改你需要的草稿，其他字段仍由原表单完整保留。")}</p><p>{i18n.t("省略范围会覆盖所有符合条件的群；空列表关闭全部欢迎。保存后仍需在详情核对应用，不能将草稿当成生效配置。")}</p></> : <p>{i18n.t("继续使用下方原有“应用变更”与状态核对。完成后返回用途页，选择完整测试群进行真实成员加入的人工核验；应用不等于平台业务验证。")}</p>}
-    <div className="flex flex-wrap gap-2"><Button asChild variant="outline"><Link to={welcomeReturnUrl(instanceKey)}>{i18n.t("返回群欢迎流程")}</Link></Button>{kind === 'config' && <Button asChild variant="outline"><Link to={welcomeDetailUrl(instanceKey)}>{i18n.t("保存后到详情核对应用")}</Link></Button>}</div>
+    <div className="flex flex-wrap gap-2"><Button asChild variant="secondary"><Link to={welcomeReturnUrl(instanceKey)}>{i18n.t("返回群欢迎流程")}</Link></Button>{kind === 'config' && <Button asChild variant="secondary"><Link to={welcomeDetailUrl(instanceKey)}>{i18n.t("保存后到详情核对应用")}</Link></Button>}</div>
   </CardContent></Card>
 }

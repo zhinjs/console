@@ -112,7 +112,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
   }
   return (
     <ObjectSection title={copy.title} description={copy.description}
-      actions={<Button variant="outline" size="sm" onClick={refresh} disabled={list.status === 'loading'}><RefreshCw className={list.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
+      actions={<Button variant="secondary" size="sm" onClick={refresh} disabled={list.status === 'loading'}><RefreshCw className={list.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
       <FeatureReadOnlyNote scope={scope} />
       {level === 'conversation' && Object.values(details).some(state => state.value?.persistent === false) ? (
         <Alert role="status" variant="warning"><AlertDescription>{i18n.t('当前数据库不支持持久化，重启后丢失')}</AlertDescription></Alert>
@@ -122,7 +122,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
         <StatusState kind="loading" onRetry={list.refresh} placeholder={<div className="space-y-2">{[0, 1, 2].map(index => <Skeleton key={index} className="h-16" />)}</div>} />
       ) : list.value && !features.length ? (
         <StatusState kind="empty" title={i18n.t('没有可在这一层设置的功能')} description={i18n.t('只支持全局配置的功能不会出现在这里；它们在全局「功能」页签里。')}
-          actions={<Button asChild size="sm" variant="outline"><Link to={scopeHref({}, 'features')}>{i18n.t('查看全局功能')}</Link></Button>} />
+          actions={<Button asChild size="sm" variant="secondary"><Link to={scopeHref({}, 'features')}>{i18n.t('查看全局功能')}</Link></Button>} />
       ) : list.value ? (
         <>
           <div className="console-feature-toolbar">
@@ -139,7 +139,7 @@ export function FeatureLevelPanel({ scope }: { scope: Scope }) {
             </label>
           </div>
           {!visible.length ? (
-            <StatusState kind="empty" compact title={i18n.t('没有符合条件的功能')} actions={<Button size="sm" variant="outline" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
+            <StatusState kind="empty" compact title={i18n.t('没有符合条件的功能')} actions={<Button size="sm" variant="secondary" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
           ) : (
             <Card className="console-feature-rows overflow-hidden p-0" role="list" aria-label={copy.title}>
               {visible.map(row => {
@@ -358,7 +358,7 @@ function FeatureRow({ scope, level, levelKey, feature, row, detail, reload, adop
             canConfigure={canConfigure} busy={busy} onSave={saveField} onRemove={removeField} canReferenceEnv={canReferenceEnv} envRefused={envRefused} />
           {row.overriddenHere && canConfigure ? (
             <div className="flex justify-end">
-              <Button variant="outline" size="sm" disabled={busy} onClick={clearAll}><Eraser />{i18n.t('移除此层全部覆盖')}</Button>
+              <Button variant="secondary" size="sm" disabled={busy} onClick={clearAll}><Eraser />{i18n.t('移除此层全部覆盖')}</Button>
             </div>
           ) : null}
         </div>

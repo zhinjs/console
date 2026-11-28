@@ -204,8 +204,8 @@ export default function IntrospectionPage() {
         title={i18n.t("运行时能力")}
         description={i18n.t("高级原始视图：当前运行代注册的命令、中间件、组件、工具、提示词与 MCP。哪个插件提供、对哪些范围开放，看下方摘要并链到插件和对象树。")}
         actions={<>
-          <Button variant="outline" size="sm" asChild><Link to={CONSOLE_PATHS.permissions}><ShieldCheck />{i18n.t("命令权限说明")}</Link></Button>
-          <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => { setPage(1); void load(tab, 1, appliedFilter) }}>
+          <Button variant="secondary" size="sm" asChild><Link to={CONSOLE_PATHS.permissions}><ShieldCheck />{i18n.t("命令权限说明")}</Link></Button>
+          <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => { setPage(1); void load(tab, 1, appliedFilter) }}>
             <RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
         </>}
       />
@@ -214,7 +214,7 @@ export default function IntrospectionPage() {
         <TabsList className="h-auto w-full justify-start overflow-x-auto p-1" aria-label={i18n.t("运行时能力分类")}>
           {(Object.keys(TAB_CONFIG) as IntrospectionTab[]).map((key) => {
             const Icon = TAB_CONFIG[key].icon
-            return <TabsTrigger key={key} value={key} className="shrink-0 gap-1.5"><Icon className="h-4 w-4" />{copy[key].label}</TabsTrigger>
+            return <TabsTrigger key={key} value={key} className="shrink-0 gap-2"><Icon className="h-4 w-4" />{copy[key].label}</TabsTrigger>
           })}
         </TabsList>
 
@@ -233,7 +233,7 @@ export default function IntrospectionPage() {
                     onKeyDown={(event) => { if (event.key === 'Enter') applyFilter(query) }}
                     placeholder={i18n.t("筛选名称、来源或描述…")}
                     aria-label={i18n.t("筛选{0}", [copy[key].label])}
-                    className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-9 w-full rounded-md border bg-background pl-10 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   />
                 </div>
                 <span className="text-xs text-muted-foreground">
@@ -267,7 +267,7 @@ export default function IntrospectionPage() {
               <footer className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center">
                 <details className="min-w-0 flex-1 text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("技术信息")}</summary><p className="mt-2 break-all">API：{sourceUrl}</p></details>
                 {hasMore ? (
-                  <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => setPage(value => value + 1)}>
+                  <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => setPage(value => value + 1)}>
                     {loading ? i18n.t("加载中…") : i18n.t("加载更多")}
                   </Button>
                 ) : null}

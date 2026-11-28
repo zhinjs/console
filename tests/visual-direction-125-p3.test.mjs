@@ -1,7 +1,7 @@
 // console#125 phase 3 (fonts, inline code, surfaces, motion, focus, icons, empty copy), Console source only.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SAVED_HOLD_MS, saveButtonPhase } from '../console-ui/src/components/save-feedback-model.mjs'
@@ -34,9 +34,11 @@ test('Inter and JetBrains Mono are self-hosted (Latin subset, swap) and the stac
   }
   const families = faces.map(face => /font-family: '([^']+)'/.exec(face)[1])
   assert.deepEqual(families, ['Inter', 'JetBrains Mono'])
-  const tokens = read('console-ui/src/design-system.css')
+  // The stacks are the library's tokens (console-ui 1.3.0); the Console loads the fonts and does not redefine them.
+  const tokens = read('node_modules/@zhin.js/console-ui/dist/tokens.css')
   assert.match(tokens, /--console-font-sans: 'Inter', /)
   assert.match(tokens, /--console-font-mono: 'JetBrains Mono', /)
+  assert.doesNotMatch(read('console-ui/src/design-system.css'), /--console-font-(sans|mono):/)
   assert.match(read('client/main.tsx'), /import "\.\.\/console-ui\/src\/fonts\.css";/)
   assert.match(read('client/style.css'), /--font-mono: var\(--console-font-mono\);/, 'Tailwind font-mono follows the Console stack')
   for (const { path, css } of consoleCss()) {
@@ -75,11 +77,13 @@ test('two surface levels: the model list sits in one panel, and panels hold hair
 })
 
 test('motion has three durations on one curve; no CSS hard-codes a transition or animation time', () => {
+  // The durations and curves are the library's (console-ui 1.3.0: fast 120 / base 200 / slow 280 / exit 180).
+  const library = read('node_modules/@zhin.js/console-ui/dist/tokens.css')
+  for (const [name, value] of [['fast', '120ms'], ['base', '200ms'], ['slow', '280ms'], ['exit', '180ms']]) assert.match(library, new RegExp(`--console-motion-${name}: ${value};`))
   const tokens = read('console-ui/src/design-system.css')
-  for (const [name, value] of [['fast', '120ms'], ['base', '200ms'], ['slow', '280ms']]) {
-    assert.match(tokens, new RegExp(`--console-motion-${name}: 0ms;`), `${name} is off unless motion is allowed`)
-    assert.match(tokens, new RegExp(`@media \\(prefers-reduced-motion: no-preference\\) \\{\\s*:root \\{[^}]*--console-motion-${name}: ${value};`))
-  }
+  assert.doesNotMatch(tokens, /--console-motion-(fast|base|slow):/, 'not redefined by the Console')
+  // Reduced motion turns every remaining Console transition and animation off.
+  assert.match(tokens, /@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after \{\s*animation-duration: 0\.01ms !important;[\s\S]*?transition-duration: 0\.01ms !important;/)
   assert.match(tokens, /--console-duration-fast: var\(--console-motion-fast\);/)
   const literal = /(?<![\w-])(transition|animation)(-duration|-delay)?\s*:([^;{}]*)/g
   const offenders = []
@@ -97,12 +101,14 @@ test('motion has three durations on one curve; no CSS hard-codes a transition or
 test('toasts rise 8px and fade in, fade out on exit, and only when motion is allowed', () => {
   const css = read('console-ui/src/components/toast.css')
   const allowed = /@media \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n  \}/.exec(css)[1]
-  assert.match(allowed, /\.console-toast \{ animation: console-toast-in var\(--console-motion-base\) var\(--console-ease-out\) both; \}/)
-  assert.match(allowed, /\.console-toast\[data-state="closing"\] \{ animation: console-toast-out var\(--console-motion-fast\)/)
-  assert.match(css, /@keyframes console-toast-in \{\s*from \{ opacity: 0; transform: translate3d\(0, 8px, 0\); \}/)
+  // The Console's own notices are `.console-notice` (the library's `.console-toast` is the one-line pill).
+  assert.match(allowed, /\.console-notice \{ animation: console-notice-in var\(--console-motion-base\) var\(--console-ease-out\) both; \}/)
+  assert.match(allowed, /\.console-notice\[data-state="closing"\] \{ animation: console-notice-out var\(--console-motion-exit\)/)
+  assert.match(css, /@keyframes console-notice-in \{\s*from \{ opacity: 0; transform: translate3d\(0, 8px, 0\); \}/)
   const toast = read('console-ui/src/components/toast.tsx')
   assert.match(toast, /data-state=\{closing\.has\(notification\.id\) \? 'closing' : 'open'\}/)
-  assert.match(toast, /getPropertyValue\('--console-motion-fast'\)/, 'the exit waits exactly the token, 0ms when motion is reduced')
+  assert.match(toast, /getPropertyValue\('--console-motion-exit'\)/, 'the exit waits exactly the token')
+  assert.match(toast, /prefers-reduced-motion: reduce\)'\)\.matches\) return 0/, 'and not at all when motion is reduced')
 })
 
 test('save feedback stays on the button: 保存中… → 已保存 for 1.5 s → the label', () => {
@@ -132,13 +138,14 @@ test('icons: one stroke, 18px in navigation, no tiles in lists or ⌘K, and the 
   assert.match(read('console-ui/src/design-system.css'), /svg\.lucide \{ stroke-width: 1\.75; \}/)
   const shell = read('console-ui/src/shell.css')
   assert.match(shell, /\.console-nav-icon svg \{\s*width: 1\.125rem;/)
-  assert.match(shell, /\.console-topnav-menu-icon svg \{ width: 1\.125rem; height: 1\.125rem; \}/)
+  // Top-bar sections are the library's NavPill / NavIcon (20px icons, console-ui 1.3.0); no menu tiles any more.
+  assert.doesNotMatch(shell, /console-topnav-menu-icon/)
+  assert.doesNotMatch(read('console-ui/src/layouts/workspace-navigation.css'), /console-topnav-menu/, 'no rules left for the removed top-bar menus')
   const command = /\.console-command-icon \{([^}]*)\}/.exec(read('console-ui/src/design-system.css'))[1]
   assert.doesNotMatch(command, /background/)
   assert.doesNotMatch(/\.console-plugin-catalog-icon \{([^}]*)\}/.exec(read('console-ui/src/pages/plugins.css'))[1], /background/)
-  assert.doesNotMatch(/\.agent-playground-session-icon \{([^}]*)\}/.exec(read('console-ui/src/agent-playground.css'))[1], /background/)
-  // @zhin.js/adapter-sandbox 1.2.0 no longer renders 「Conversations」, so the Console no longer hides it.
-  assert.doesNotMatch(read('console-ui/src/agent-playground.css'), /\.agent-playground-brand small/)
+  // @zhin.js/adapter-sandbox 1.2.0 styles its own playground: the Console keeps no agent-playground.css.
+  assert.equal(existsSync(new URL('../console-ui/src/agent-playground.css', import.meta.url)), false)
   assert.equal(pluginIconType({ kind: 'plugin', name: 'adapter-qq', packageName: '@zhin.js/adapter-qq' }), 'adapter')
   assert.equal(pluginIconType({ kind: 'package', name: 'x', packageName: 'x', catalog: 'ai' }), 'ai')
   assert.equal(pluginIconType({ kind: 'plugin', name: 'welcome', packageName: '@zhin.js/plugin-welcome' }), 'feature')

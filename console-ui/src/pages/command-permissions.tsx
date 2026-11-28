@@ -117,7 +117,7 @@ export default function CommandPermissionsPage() {
   return <PageShell>
     <PageHeader title={i18n.t("命令权限说明")}
       description={i18n.t("查看规则为什么匹配。这里只做说明与假设检查，不执行命令，也不向平台查询或验证权限。")}
-      actions={<Button asChild variant="outline" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />
+      actions={<Button asChild variant="secondary" size="sm"><Link to="/introspection?tab=commands"><Blocks />{i18n.t("返回命令目录")}</Link></Button>} />
     {denied ? <StatusState kind="forbidden" permissions={['status.view']} />
       : !active ? <StatusState kind="disconnected" description={i18n.t("需要连接当前 Host 并使用有状态查看权限的身份读取权限说明。")} /> : null}
     <Card><CardHeader><CardTitle>{i18n.t("选择当前运行代的命令")}</CardTitle></CardHeader><CardContent className="space-y-3">
@@ -133,8 +133,8 @@ export default function CommandPermissionsPage() {
         {!current.commands.length ? <StatusState compact kind="empty" title={i18n.t("当前筛选没有命令。")} description={i18n.t("换个关键词，或清空搜索查看全部命令。")} /> : <div className="grid gap-2 sm:grid-cols-2">{current.commands.map(command => <button type="button" key={command.id} aria-pressed={selected?.id === command.id}
           className={`min-w-0 text-left rounded-md border p-3 space-y-1 ${selected?.id === command.id ? 'border-primary bg-muted/40' : ''}`} onClick={() => choose(command)}>
           <span className="block font-medium break-words">{command.name}</span><span className="block text-xs text-muted-foreground break-all">{command.owner}</span><span className="block text-sm break-words">{command.description}</span></button>)}</div>}
-        <div className="flex gap-2"><Button variant="outline" disabled={loading || current.page <= 1} onClick={() => reload(current.page - 1)}>{i18n.t("上一页")}</Button>
-          <Button variant="outline" disabled={loading || current.page * current.pageSize >= current.total} onClick={() => reload(current.page + 1)}>{i18n.t("下一页")}</Button></div></>}
+        <div className="flex gap-2"><Button variant="secondary" disabled={loading || current.page <= 1} onClick={() => reload(current.page - 1)}>{i18n.t("上一页")}</Button>
+          <Button variant="secondary" disabled={loading || current.page * current.pageSize >= current.total} onClick={() => reload(current.page + 1)}>{i18n.t("下一页")}</Button></div></>}
     </CardContent></Card>
     {selected && current && <div className="grid gap-5 lg:grid-cols-2"><Card><CardHeader><CardTitle className="break-words">{selected.name}</CardTitle></CardHeader><CardContent className="space-y-4">
       <p className="text-sm">{i18n.t("permit 数组中的条件必须全部满足；同一项括号内的逗号表示任选一个。平台和自定义 checker 均不会执行。")}</p>

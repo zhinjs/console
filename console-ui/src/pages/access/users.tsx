@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserCheck, UserX } from 'lucide-react'
 import { useI18n } from '../../i18n'
-import { Badge, Button, Card, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, PageHeader, PageShell, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, ConfirmDialog, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, Input, PageHeader, PageShell, Skeleton, StatusDot, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tile } from '@zhin.js/console-ui'
 import { StatusState } from '../../components/StatusState'
 import { ActionReceipt, useActionReceipt } from '../../components/ActionReceipt'
 import { useSaveOutcome } from '../../components/ApplyFeedback'
@@ -89,8 +89,8 @@ export default function AccessUsersPage() {
         title={i18n.t("用户")}
         description={i18n.t("能登录 Console 的账号与它们的角色绑定。禁用、删除或改密码会让该用户的会话立即失效。")}
         actions={<>
-          <Button variant="outline" size="sm" onClick={users.refresh} disabled={users.loading}><RefreshCw className={users.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
-          {canManage ? <Button size="sm" onClick={() => setPending({ kind: 'create' })} disabled={!roles.loaded}><Plus />{i18n.t("新建用户")}</Button> : null}
+          <Button variant="secondary" size="sm" onClick={users.refresh} disabled={users.loading}><RefreshCw className={users.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+          {canManage ? <Button size="sm" variant="primary" onClick={() => setPending({ kind: 'create' })} disabled={!roles.loaded}><Plus />{i18n.t("新建用户")}</Button> : null}
         </>}
       />
       {!canManage ? <ReadOnlyNotice errorKind={users.errorKind} /> : null}
@@ -119,15 +119,21 @@ export default function AccessUsersPage() {
                 {users.data.map(user => (
                   <TableRow key={user.id}>
                     <TableCell className="min-w-0">
-                      <div className="font-medium break-words">{user.displayName}</div>
-                      <code className="console-access-id" title={user.username}>{user.username}</code>
+                      {/* The Access design: a round initial before the name (neutral: 访问控制 has no category colour). */}
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Tile size="sm" text>{Array.from(user.displayName || user.username)[0]?.toLocaleUpperCase() ?? '?'}</Tile>
+                        <div className="min-w-0">
+                          <div className="font-medium break-words">{user.displayName}</div>
+                          <code className="console-access-id" title={user.username}>{user.username}</code>
+                        </div>
+                      </div>
                       <div className="mt-1 md:hidden"><BindingBadges bindings={user.bindings} /></div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell"><BindingBadges bindings={user.bindings} /></TableCell>
                     <TableCell>
                       {user.disabled
-                        ? <Badge variant="outline" className="whitespace-nowrap">{i18n.t("已禁用")}</Badge>
-                        : <Badge variant="outline" className="whitespace-nowrap">{i18n.t("启用")}</Badge>}
+                        ? <StatusDot tone="neutral" className="whitespace-nowrap">{i18n.t("已禁用")}</StatusDot>
+                        : <StatusDot tone="ok" className="whitespace-nowrap">{i18n.t("启用")}</StatusDot>}
                     </TableCell>
                     <TableCell className="hidden whitespace-nowrap text-muted-foreground lg:table-cell">
                       {user.passwordChangedAt ? i18n.date(user.passwordChangedAt, { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
@@ -236,7 +242,7 @@ function ProfileDialog({ user, onClose, onSaved }: { user: IamUser; onClose: () 
           </FormField>
           {error ? <StatusState compact error={error} /> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("保存")}</Button>
           </DialogFooter>
         </form>
@@ -305,7 +311,7 @@ function CreateUserDialog({ roles, onClose, onCreated }: { roles: readonly IamRo
           </section>
           {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("创建")}</Button>
           </DialogFooter>
         </form>
@@ -347,7 +353,7 @@ function BindingsDialog({ user, users, roles, onClose, onSaved }: {
           ? <p role="note" className="text-sm text-muted-foreground">{i18n.t("该用户将不再是所有者。")}</p> : null}
         {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
         <DialogFooter>
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
           <Button type="button" size="sm" onClick={() => void save()} disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("保存")}</Button>
         </DialogFooter>
       </DialogContent>
@@ -394,7 +400,7 @@ function ResetPasswordDialog({ user, onClose, onDone }: { user: IamUser; onClose
           </FormField>
           {error ? <p role="alert" className="text-sm text-destructive break-words">{error}</p> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>{i18n.t("取消")}</Button>
             <Button type="submit" size="sm" variant="destructive-solid" disabled={saving}>{saving ? i18n.t("处理中...") : i18n.t("重置密码")}</Button>
           </DialogFooter>
         </form>

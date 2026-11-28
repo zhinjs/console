@@ -166,13 +166,13 @@ function RestartControls({ state, relevant, refreshing }: { state: RestartState;
   if (confirming) {
     return <div className="console-apply-actions" role="group" aria-label={i18n.t('确认重启')}>
       <span className="console-apply-basis">{i18n.t('重启会断开所有连接，进行中的对话可能被中止。')}</span>
-      <Button size="sm" variant="outline" onClick={() => setConfirming(false)} autoFocus>{i18n.t('取消')}</Button>
+      <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} autoFocus>{i18n.t('取消')}</Button>
       <Button size="sm" variant="destructive-solid" onClick={() => { setConfirming(false); void hostRestart.start() }}><RotateCw />{i18n.t('确认重启')}</Button>
     </div>
   }
   return <div className="console-apply-actions">
     <Button size="sm" onClick={() => setConfirming(true)}><RotateCw />{i18n.t('立即重启')}</Button>
-    <Button size="sm" variant="outline" onClick={() => setLater(true)}>{i18n.t('稍后')}</Button>
+    <Button size="sm" variant="secondary" onClick={() => setLater(true)}>{i18n.t('稍后')}</Button>
   </div>
 }
 
@@ -208,7 +208,7 @@ function RestartProgressBody({ state, refreshing }: { state: RestartState; refre
         <li>{i18n.t('以 --once 或自定义启动器运行时，进程不会自动重新启动，需要手动启动。')}</li>
       </ul>
       <div className="console-apply-actions">
-        <Button asChild size="sm" variant="outline"><Link to={CONSOLE_PATHS.opsInstance}>{i18n.t('查看实例与日志')}</Link></Button>
+        <Button asChild size="sm" variant="secondary"><Link to={CONSOLE_PATHS.opsInstance}>{i18n.t('查看实例与日志')}</Link></Button>
         <Button asChild size="sm" variant="ghost"><Link to={CONSOLE_PATHS.opsSelfCheck}><Stethoscope />{i18n.t('连接自检')}</Link></Button>
         <Button size="sm" variant="ghost" onClick={() => hostRestart.keepWaiting()}>{i18n.t('继续等待')}</Button>
       </div>

@@ -148,7 +148,7 @@ export function PersonalSessionModelPicker({
           {i18n.t("保存")}
         </Button>
         <Button
-          variant="outline"
+          variant="secondary"
           size="icon"
           aria-label={i18n.t("重新读取会话模型")}
           onClick={() => void load()}

@@ -2,7 +2,9 @@ import { TASK_HUB_READ_PERMISSIONS } from './pages/task-hub-model.mjs'
 import { ANY_TARGET, hasAnyConsolePermission, hasConsolePermission, scopedAdapters, UNRESTRICTED_ACCESS } from './utils/console-access.mjs'
 
 /**
- * The six Console sections (ADR 0052). `icon` names a lucide icon (components/sidebarMenuIcons.ts). The first four are day-to-day work, the last two
+ * The six Console sections (ADR 0052). `icon` names a lucide icon (components/sidebarMenuIcons.ts); the
+ * top bar draws them as NavPill / NavIcon (console-ui 1.3.0, the Main design: 概览 home, 会话 message,
+ * 功能 grid, 插件 puzzle, 运维 server, 访问控制 shield). The first four are day-to-day work, the last two
  * administration. `permissions` is the any-of set that makes a section's pages visible
  * when a page declares nothing more specific (ADR 0049 permission names).
  */
@@ -12,11 +14,11 @@ export const NAV_TIERS = Object.freeze([
 ])
 
 export const NAV_SECTIONS = Object.freeze([
-  Object.freeze({ id: 'overview', icon: 'LayoutDashboard', label: '概览', tier: 'daily', permissions: Object.freeze(['status.view']) }),
+  Object.freeze({ id: 'overview', icon: 'Home', label: '概览', tier: 'daily', permissions: Object.freeze(['status.view']) }),
   Object.freeze({ id: 'sessions', icon: 'MessagesSquare', label: '会话', tier: 'daily', permissions: Object.freeze(['endpoint.view', 'endpoint.operate']) }),
-  Object.freeze({ id: 'features', icon: 'Sparkles', label: '功能', tier: 'daily', permissions: Object.freeze(['feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'agent.configure']) }),
+  Object.freeze({ id: 'features', icon: 'LayoutGrid', label: '功能', tier: 'daily', permissions: Object.freeze(['feature.view', 'feature.configure', 'feature.toggle', 'agent.view', 'agent.configure']) }),
   Object.freeze({ id: 'plugins', icon: 'Puzzle', label: '插件', tier: 'daily', permissions: Object.freeze(['plugin.manage']) }),
-  Object.freeze({ id: 'ops', icon: 'Wrench', label: '运维', tier: 'admin', permissions: Object.freeze([
+  Object.freeze({ id: 'ops', icon: 'Server', label: '运维', tier: 'admin', permissions: Object.freeze([
     'ops.config.read', 'ops.config.write', 'ops.env.read', 'ops.env.write', 'ops.database.read', 'ops.database.write',
     'ops.schedule.read', 'ops.schedule.write', 'ops.files.read', 'ops.files.write', 'ops.restart', 'ops.terminal',
   ]) }),
@@ -208,4 +210,55 @@ export function buildNavigation(routes, access = UNRESTRICTED_ACCESS) {
         return { ...section, routes: groups.flatMap(group => group.routes), groups }
       }),
   })).filter(tier => tier.sections.length)
+}
+
+/**
+ * Top bar (console-ui 1.3.0 NavPill / NavIcon, the Main design): one item per visible section, in
+ * order across both tiers. Each item opens the section's first page; the section's other pages are
+ * the Chips under the bar ({@link sectionSubnav}).
+ */
+export function navSections(tiers) {
+  return tiers.flatMap(tier => tier.sections)
+}
+
+/** The section the current page belongs to: the one listing its menu page, else the page's own section. */
+export function activeSectionId(tiers, activePath, fallback = null) {
+  const owner = navSections(tiers).find(section => section.routes.some(route => route.path === activePath))
+  if (owner) return owner.id
+  const id = fallback ? routeSectionId(fallback) : null
+  return id && navSections(tiers).some(section => section.id === id) ? id : null
+}
+
+/** Where a section item leads: its first visible page. */
+export function sectionEntryPath(section) {
+  return section?.routes?.[0]?.path ?? null
+}
+
+const trimPath = (path) => typeof path === 'string' && path.length > 1 ? path.replace(/\/+$/, '') || '/' : path
+
+/**
+ * `aria-current` of the current section's link (top-bar NavPill, phone TabBar item). The link opens
+ * the section's first page, so it is `"page"` only on that page; on any other page of the section
+ * it is `"true"` (the current item of the set, not the current page).
+ */
+export function sectionLinkCurrent(to, pathname) {
+  return to != null && trimPath(to) === trimPath(pathname) ? 'page' : 'true'
+}
+
+/**
+ * The Chips under the top bar for one section: its pages by group (功能 splits 核心 / 插件页面).
+ * A section with a single page needs no sub-navigation (empty list).
+ */
+export function sectionSubnav(section) {
+  if (!section || section.routes.length < 2) return []
+  return section.groups.map(group => ({ id: group.id, label: group.label, labelled: section.groups.length > 1, routes: group.routes }))
+}
+
+/** Phone tab bar (TabBar, 4–5 items): the first four sections, then 「更多」 when any section is left over. */
+export const TAB_BAR_SECTIONS = 4
+export function tabBarModel(tiers, activeId) {
+  const sections = navSections(tiers)
+  const tabs = sections.slice(0, TAB_BAR_SECTIONS)
+  const rest = sections.slice(TAB_BAR_SECTIONS)
+  return { tabs, more: rest.length > 0, moreActive: rest.some(section => section.id === activeId) }
 }

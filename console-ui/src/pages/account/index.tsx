@@ -111,7 +111,7 @@ function PasswordSection() {
     })
   }
 
-  const row = (id: string, label: string, value: string, set: (value: string) => void, autoComplete: string) => <div className="space-y-1.5">
+  const row = (id: string, label: string, value: string, set: (value: string) => void, autoComplete: string) => <div className="space-y-2">
     <label htmlFor={id} className="block text-sm font-medium">{label}</label>
     <Input id={id} type="password" autoComplete={autoComplete} value={value} disabled={busy}
       onChange={event => { set(event.target.value); setError('') }} />
@@ -184,7 +184,7 @@ function TokensSection() {
   return <ObjectSection title={i18n.t('我的 API 令牌')}
     description={i18n.t('给脚本和自动化使用（环境变量 ZHIN_CONSOLE_TOKEN）。令牌的权限不超过你自己的权限。')}
     actions={<>
-      <Button size="sm" variant="outline" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+      <Button size="sm" variant="secondary" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
       <Button size="sm" onClick={() => setCreating(true)}><Plus />{i18n.t('新建令牌')}</Button>
     </>}>
     <ActionReceipt controller={receipt} />
@@ -259,12 +259,12 @@ function CreateTokenDialog({ open, onOpenChange, onCreated }: {
           <DialogTitle className="flex items-center gap-2"><UserCog className="h-4 w-4" aria-hidden="true" />{i18n.t('新建 API 令牌')}</DialogTitle>
           <DialogDescription>{i18n.t('令牌拥有与你相同的权限。用途写清楚，方便以后吊销。')}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label htmlFor="account-token-name" className="block text-sm font-medium">{i18n.t('名称')}</label>
           <Input id="account-token-name" value={name} maxLength={128} disabled={busy} placeholder={i18n.t('例如：部署脚本')}
             onChange={event => { setName(event.target.value); setError('') }} />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label htmlFor="account-token-expiry" className="block text-sm font-medium">{i18n.t('有效期')}</label>
           <SelectField id="account-token-expiry" value={days} disabled={busy} onValueChange={setDays}
             options={TOKEN_EXPIRY_DAYS.map(value => ({ value: String(value), label: value > 0 ? i18n.t('{0} 天', [value]) : i18n.t('永不过期') }))} />

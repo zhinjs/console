@@ -27,10 +27,11 @@ interface ToastTimer { remaining: number; startedAt: number; pausedBy: Set<Pause
 const ToastContext = createContext<ToastContextValue | null>(null)
 const VARIANT_ICONS = { default: Info, success: CheckCircle, error: AlertCircle, warning: AlertTriangle, info: Info }
 
-/** Exit length of a toast: the Console's --console-motion-fast (0ms when the viewer reduces motion). */
+/** Exit length of a notice: the library's --console-motion-exit (no wait when the viewer reduces motion). */
 function exitDuration(): number {
   if (typeof window === 'undefined' || typeof getComputedStyle !== 'function') return 0
-  const value = getComputedStyle(document.documentElement).getPropertyValue('--console-motion-fast').trim()
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 0
+  const value = getComputedStyle(document.documentElement).getPropertyValue('--console-motion-exit').trim()
   const parsed = Number.parseFloat(value)
   if (!Number.isFinite(parsed)) return 0
   return value.endsWith('ms') ? parsed : value.endsWith('s') ? parsed * 1000 : parsed
@@ -128,20 +129,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   return <ToastContext.Provider value={{ toast, success, error, warning, info }}>
     {children}
-    <div className="console-toast-stack">
+    <div className="console-notice-stack">
       {toasts.map(notification => {
         const variant = notification.variant ?? 'default'
         const Icon = VARIANT_ICONS[variant]
-        return <div key={notification.id} className={`console-toast console-toast-${variant}`}
+        return <div key={notification.id} className={`console-notice console-notice-${variant}`}
           data-state={closing.has(notification.id) ? 'closing' : 'open'}
           role={variant === 'error' ? 'alert' : 'status'} aria-atomic="true"
           onMouseEnter={() => pause(notification.id, 'pointer')} onMouseLeave={() => resume(notification.id, 'pointer')}
           onFocusCapture={() => pause(notification.id, 'focus')} onBlurCapture={event => {
             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) resume(notification.id, 'focus')
           }}>
-          <span className="console-toast-icon" aria-hidden="true"><Icon /></span>
-          <div className="console-toast-copy">{notification.title && <strong>{notification.title}</strong>}<p>{notification.description}</p></div>
-          <button type="button" className="console-toast-close" onClick={() => remove(notification.id)} aria-label={i18n.t('关闭通知')}><X /></button>
+          <span className="console-notice-icon" aria-hidden="true"><Icon /></span>
+          <div className="console-notice-copy">{notification.title && <strong>{notification.title}</strong>}<p>{notification.description}</p></div>
+          <button type="button" className="console-notice-close" onClick={() => remove(notification.id)} aria-label={i18n.t('关闭通知')}><X /></button>
         </div>
       })}
     </div>

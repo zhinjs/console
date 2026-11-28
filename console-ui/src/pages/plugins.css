@@ -14,45 +14,10 @@
     gap: var(--console-space-3);
   }
 
-  .console-plugin-catalog-filters {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--console-space-1);
-    padding: var(--console-space-1);
-    border: var(--console-border-hairline) solid var(--console-border-default);
-    border-radius: var(--console-radius-2);
-    background: var(--console-surface-inset);
-  }
-
-  .console-plugin-filter-pill {
-    border: 0;
-    border-radius: var(--console-radius-1);
-    padding: var(--console-space-1) var(--console-space-3);
-    background: transparent;
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-label);
-    font-weight: var(--console-weight-medium);
-    line-height: 1.4;
-    cursor: pointer;
-    transition: background-color var(--console-motion-fast) var(--console-ease-out), color var(--console-motion-fast) var(--console-ease-out), box-shadow var(--console-motion-fast) var(--console-ease-out);
-  }
-
-  .console-plugin-filter-pill:hover {
-    color: hsl(var(--foreground));
-  }
-
-  .console-plugin-filter-pill.is-active {
-    background: hsl(var(--card));
-    color: hsl(var(--foreground));
-    font-weight: var(--console-weight-strong);
-    box-shadow: var(--console-elevation-0);
-  }
-
-  .console-plugin-catalog-count {
-    color: hsl(var(--muted-foreground));
-    font-size: var(--console-text-body);
-  }
+  /* Health filter and grouping: library Segmented controls (soft cards). */
+  .console-plugin-catalog-filters { width: min(30rem, 100%); }
+  .console-plugin-catalog-groups { width: min(18rem, 100%); }
+  .console-plugin-filter-count { color: inherit; opacity: 0.7; font-variant-numeric: tabular-nums; }
 
   .console-plugin-catalog-search {
     position: relative;
@@ -179,6 +144,8 @@
   .console-provider-row-summary { min-width: 0; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); }
   .console-plugin-scope-chip > code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .console-marketplace-categories { max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  /* 「共 N 个插件」 under the market filters: secondary text. */
+  .console-plugin-catalog-count { margin: 0; color: hsl(var(--console-muted)); font-size: var(--console-text-sm); font-variant-numeric: tabular-nums; }
 }
 
 /* 插件表：一行一个插件；名称、类型、来源、版本（完整显示）、状态（只在异常时是标签）、操作。 */

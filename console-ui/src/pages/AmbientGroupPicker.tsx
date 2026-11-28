@@ -108,7 +108,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
   }
 
   return <div className="space-y-3">
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{i18n.t("已选的群（{0}）", [groups.length])}</p>
       {groups.length === 0
         ? <p className="text-sm text-muted-foreground">{i18n.t("还没有选群。")}</p>
@@ -116,7 +116,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
           {groups.map((group) => {
             const name = names.get(group)
             const reason = outside.has(group) && read.catalog ? groupOutsideReason(group, read.catalog) : null
-            return <li key={group} className="flex items-center gap-2 px-3 py-1.5">
+            return <li key={group} className="flex items-center gap-2 px-3 py-2">
               <span className="min-w-0 flex-1">
                 <span className="block break-all font-medium">{name ?? group}</span>
                 {name ? <span className="console-table-sub break-all">{group}</span> : null}
@@ -147,7 +147,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
         {view.sections.map((section) => <fieldset key={section.key} className="space-y-1">
           <legend className="text-xs font-medium text-muted-foreground">{section.endpoint} · {section.adapter}</legend>
           {section.groups.map((group) => <label key={group.value} className="flex items-start gap-2 rounded px-1 py-1 text-sm hover:bg-muted/50">
-            <Checkbox className="mt-0.5" checked={groups.includes(group.value)} onCheckedChange={() => onChange(toggleGroupSelection(groups, group.value))} />
+            <Checkbox className="mt-1" checked={groups.includes(group.value)} onCheckedChange={() => onChange(toggleGroupSelection(groups, group.value))} />
             <span className="min-w-0">
               <span className="block break-all">{group.name || group.id}</span>
               <span className="console-table-sub break-all">{group.value}</span>
@@ -157,7 +157,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
       </div> : null}
       {listUsable && catalog.failures.length > 0 ? <div role="status" className="space-y-1 text-xs text-warning">
         {catalog.failures.map((failure) => <p key={`${failure.adapter}/${failure.endpoint}`} className="break-all">{i18n.t("{0}（{1}）的群列表没读到：{2}", [failure.endpoint, failure.adapter, failure.error])}</p>)}
-        <Button type="button" variant="outline" size="sm" onClick={read.retry}>{i18n.t("重新读取群列表")}</Button>
+        <Button type="button" variant="secondary" size="sm" onClick={read.retry}>{i18n.t("重新读取群列表")}</Button>
       </div> : null}
     </div>
 
@@ -171,7 +171,7 @@ export function AmbientGroupPickerView({ groups, onChange, read }: { groups: str
           onChange={(event) => { setManualText(event.target.value); setManualInvalid([]) }}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addManual() } }}
         />
-        <Button type="button" variant="outline" onClick={addManual} disabled={manualText.trim() === ''}>{i18n.t("加入")}</Button>
+        <Button type="button" variant="secondary" onClick={addManual} disabled={manualText.trim() === ''}>{i18n.t("加入")}</Button>
       </div>
       {manualInvalid.length > 0 ? <p role="alert" className="text-xs text-destructive">{i18n.t("群的写法是「平台:群号」，例如 qq:123456。这些需要改一下：{0}", [manualInvalid.join('、')])}</p> : null}
     </div>

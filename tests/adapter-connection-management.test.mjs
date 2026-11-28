@@ -7,13 +7,14 @@ const src = path => readFile(new URL(`../console-ui/src/${path}`, import.meta.ur
 test('the adapter page has one 刷新: the header re-reads accounts and the embedded SDK page', async () => {
   const page = await src('pages/scope/adapter-page.tsx')
   assert.match(page, /const refresh = \(\) => \{ data\.refresh\(\); setManagementRefresh\(value => value \+ 1\) \}/)
-  assert.match(page, /actions=\{<Button variant="outline" size="sm" onClick=\{refresh\}/)
+  // console-ui 1.3.0: secondary (sunken) is the everyday button; outline is kept only for pressed toggles.
+  assert.match(page, /actions=\{<Button variant="secondary" size="sm" onClick=\{refresh\}/)
   assert.match(page, /<AdapterConsolePage adapterKey=\{adapter\} embedded refreshKey=\{refreshKey\} toolbar=\{toolbar\} hostAccounts=\{view\.hostAccounts\} \/>/)
   // The same refresh key re-reads the shared account state of the table rows.
   assert.match(page, /<ManagedAccountsProvider adapter=\{scope\.adapter!\} refreshKey=\{managementRefresh\} enabled=\{canManage\}>/)
   // The toolbar uses the Console's own button variants, never the SDK's zk-btn.
   const toolbar = page.slice(page.indexOf('const toolbar ='), page.indexOf('return (', page.indexOf('const toolbar =')))
-  assert.match(toolbar, /<Button asChild variant="outline" size="sm">/)
+  assert.match(toolbar, /<Button asChild variant="secondary" size="sm">/)
   assert.match(toolbar, /<Button size="sm" variant=\{add\.open \? 'outline' : 'soft'\}/)
   assert.doesNotMatch(toolbar, /zk-btn/)
 })

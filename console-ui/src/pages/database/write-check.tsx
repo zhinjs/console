@@ -70,7 +70,7 @@ export function WriteCheckNotice({ controller, className, onCheck }: { controlle
             : i18n.t('请求已发出，但没有收到可信的答复，可能已经写入。请先核对，不要直接重试。')}</p>
           {pending.checkError ? <p role="alert">{pending.checkError}</p> : null}
           {pending.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t('技术详情')}</summary><p className="mt-2 whitespace-pre-wrap break-words">{pending.details}</p></details> : null}
-          {pending.phase !== 'manual' ? <Button type="button" size="sm" variant="outline" disabled={checking} data-action="write-check" onClick={() => { if (onCheck) onCheck(); else void controller.check() }}>
+          {pending.phase !== 'manual' ? <Button type="button" size="sm" variant="secondary" disabled={checking} data-action="write-check" onClick={() => { if (onCheck) onCheck(); else void controller.check() }}>
             {checking ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <SearchCheck className="mr-1 h-3.5 w-3.5" />}
             {checking ? i18n.t('正在核对…') : i18n.t('核对')}
           </Button> : null}

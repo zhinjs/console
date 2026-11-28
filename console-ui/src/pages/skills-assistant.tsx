@@ -44,9 +44,9 @@ function SkillsAssistantSession() {
     <PageHeader
       title={i18n.t("技能助手")}
       description={i18n.t("让一个专门的小助手帮机器人挑技能、挑工具、判断要不要接话。")}
-      actions={<Button variant="outline" size="sm" onClick={() => void statusRead.refresh().catch(() => {})} disabled={statusRead.loading}><RefreshCw className={statusRead.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={() => void statusRead.refresh().catch(() => {})} disabled={statusRead.loading}><RefreshCw className={statusRead.loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>}
     />
-    <div><Button asChild variant="outline" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button></div>
+    <div><Button asChild variant="secondary" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button></div>
     <SkillsStatusSection read={statusRead} onRetry={() => { void statusRead.refresh().catch(() => {}) }} />
   </PageShell>
 }
@@ -83,7 +83,7 @@ function SkillsStatusSection({ read, onRetry }: { read: StatusReadState; onRetry
           </div>)}
         </div>
         : <StatusState kind="empty" compact title={i18n.t("最近 24 小时还没有用到技能助手。")} description={i18n.t("在「AI 与模型 → 用途」给技能助手指定模型后，机器人挑技能或工具时会调用它。")}
-          actions={<Button asChild variant="outline" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>} />}
+          actions={<Button asChild variant="secondary" size="sm"><Link to="/features/ai?tab=purposes">{i18n.t("管理模型用途")}</Link></Button>} />}
       {view.hasActivity && <div className="space-y-1">
         <h3 className="text-sm font-medium">{i18n.t("最近的记录")}</h3>
         <ul className="divide-y rounded-md border text-sm">

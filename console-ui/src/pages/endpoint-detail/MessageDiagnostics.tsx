@@ -82,7 +82,7 @@ export function MessageDiagnosticsAction({ message, endpoint, selection }: { mes
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>{i18n.t("只读查看实际处理阶段，不发送或重放消息。")}{i18n.t(DIAGNOSTIC_RETENTION)}</DialogDescription></DialogHeader>
         {reason ? <p role="status" className="text-sm text-muted-foreground">{reason} {i18n.t(" 可从会话顶部查看“最近诊断”。")}</p> : <>
           <div className="flex items-center justify-between gap-3"><span className="text-xs text-muted-foreground">{message ? i18n.t("按原始完整会话与平台消息 ID 查询") : i18n.t("按当前完整会话查询最近 50 条记录")}</span>
-            <Button variant="outline" size="sm" disabled={loading || denied} onClick={() => void load()}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button></div>
+            <Button variant="secondary" size="sm" disabled={loading || denied} onClick={() => void load()}><RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button></div>
           {visible && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           {visible && loading && <StatusState kind="loading" compact title={i18n.t("正在读取处理记录…")} />}
           {visible && !loading && !error && !records.length && <p role="status" className="text-sm text-muted-foreground">{i18n.t("没有找到该范围的近期记录。")}{i18n.t(DIAGNOSTIC_RETENTION)}</p>}

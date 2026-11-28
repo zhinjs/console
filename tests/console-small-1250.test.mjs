@@ -65,6 +65,11 @@ test('CI runs the console-ui layout audit as a report-only job', () => {
   const script = read('scripts/layout-audit.mjs')
   assert.match(script, /from '@zhin\.js\/console-ui\/audit'/u)
   assert.match(script, /runLayoutAudit/u)
+  // After a theme switch it measures once the finite animations are done (bounded), not after a fixed sleep.
+  assert.match(script, /setConsoleTheme\(target, theme\)\n\s+await settleAnimations\(target\)/u)
+  assert.match(script, /document\.getAnimations\(\)/u)
+  assert.match(script, /iterations !== Infinity/u)
+  assert.doesNotMatch(script, /waitForTimeout\(600\)/u)
   const scripts = JSON.parse(read('package.json')).scripts
   assert.equal(scripts['check:layout-audit'], 'node scripts/layout-audit.mjs')
   assert.equal('audit:layout' in scripts, false)

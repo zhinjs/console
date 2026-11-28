@@ -3,8 +3,37 @@
   .console-overview-page {
     display: flex;
     flex-direction: column;
-    gap: var(--console-space-4);
+    gap: var(--console-section-gap);
   }
+
+  /* The Main design's first row: the instance hero card (two thirds) and 需处理 (one third). */
+  .console-overview-hero-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--console-section-gap);
+  }
+  @media (width >= 64rem) {
+    .console-overview-hero-row[data-attention="true"] { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
+  }
+  .console-overview-hero { display: flex; flex-direction: column; gap: var(--console-space-4); }
+  .console-overview-hero-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--console-space-3); }
+  .console-overview-hero-muted { color: hsl(var(--console-muted)); font-size: var(--console-text-sm); line-height: var(--console-leading-sm); font-variant-numeric: tabular-nums; }
+  .console-overview-hero-stats { display: flex; flex-wrap: wrap; gap: var(--console-space-4) var(--console-space-6); margin: 0; }
+  .console-overview-hero-stats > div { display: flex; flex-direction: column; gap: var(--console-space-1); }
+  .console-overview-hero-stats dd { margin: 0; font-size: var(--console-text-display); line-height: var(--console-leading-display); font-weight: var(--console-weight-strong); font-variant-numeric: tabular-nums; }
+  .console-overview-hero-stats dd small { color: hsl(var(--console-muted)); font-size: var(--console-text-md); font-weight: var(--console-weight-regular); }
+  .console-overview-hero-stats dt { color: hsl(var(--console-muted)); font-size: var(--console-text-sm); }
+  .console-overview-hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); }
+  .console-overview-hero-actions > .console-overview-hero-muted { margin-left: auto; }
+
+  .console-overview-attention { display: flex; flex-direction: column; gap: var(--console-space-3); padding: var(--console-card-padding); }
+  .console-overview-attention-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--console-space-3); }
+  .console-overview-attention-head h2 { margin: 0; font-size: var(--console-text-xl); line-height: var(--console-leading-xl); font-weight: var(--console-weight-medium); }
+  .console-overview-attention-count { font-size: var(--console-text-2xl); line-height: var(--console-leading-2xl); font-weight: var(--console-weight-strong); font-variant-numeric: tabular-nums; }
+
+  /* Lists of the second row: caption outside the card (ListCaption), rows inside (ListGroup). */
+  .console-overview-column { display: flex; min-width: 0; flex-direction: column; gap: var(--console-section-gap); }
+  .console-overview-list { display: flex; min-width: 0; flex-direction: column; gap: var(--console-space-2); }
 
   .console-overview-head {
     display: flex;
@@ -52,12 +81,10 @@
   /* 第二行：消息量 / 进程与资源 */
   .console-overview-row {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-    gap: var(--console-space-4);
-    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--console-section-gap);
+    align-items: start;
   }
-
-  .console-overview-page .console-dashboard-panel { padding: var(--console-space-4) var(--console-space-5); }
 
   .console-card-heading {
     display: flex;
@@ -68,9 +95,9 @@
   }
 
   .console-card-heading h2 {
-    font-size: var(--console-text-section);
-    font-weight: var(--console-weight-strong);
-    letter-spacing: -0.02em;
+    font-size: var(--console-text-xl);
+    line-height: var(--console-leading-xl);
+    font-weight: var(--console-weight-medium);
   }
 
   .console-card-sub {
@@ -292,6 +319,9 @@
     font-size: var(--console-text-label);
   }
 
+  /* 运行事件详情 (sheet): the message on the library's inset surface. */
+  .console-event-detail-message { padding: var(--console-space-4); border-radius: var(--console-radius-3); background: var(--console-surface-inset); }
+
   .console-message-feed { display: flex; flex-direction: column; }
 
   .console-message-row {
@@ -392,7 +422,7 @@
     -webkit-box-orient: vertical;
   }
 
-  @media (width < 90rem) {
+  @media (width < 64rem) {
     .console-overview-row { grid-template-columns: minmax(0, 1fr); }
   }
 

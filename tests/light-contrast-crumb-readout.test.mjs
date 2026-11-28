@@ -5,7 +5,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { hslTokens } from './helpers/token-cascade.mjs'
-import { THEME_PALETTES } from '../console-ui/src/theme/index.ts'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 const rgb = ({ h, s, l }) => {
@@ -33,9 +32,9 @@ test('the cache-hit readout badge writes its text in foreground; chart-3 only fi
   assert.match(charts, /bg-\[hsl\(var\(--chart-3\)\/0\.14\)\][^"]*text-foreground/)
 })
 
-for (const palette of THEME_PALETTES) for (const dark of [false, true]) {
-  test(`${palette.id}/${dark ? 'dark' : 'light'}: both text runs reach 4.5:1`, () => {
-    const tokens = hslTokens(palette.id, dark)
+for (const dark of [false, true]) {
+  test(`${dark ? 'dark' : 'light'}: both text runs reach 4.5:1`, () => {
+    const tokens = hslTokens(dark)
     for (const surface of ['background', 'card']) {
       const base = rgb(tokens[surface])
       const crumb = ratio(rgb(tokens['muted-foreground']), base)

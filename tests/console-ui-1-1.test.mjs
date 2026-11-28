@@ -29,7 +29,7 @@ test('no local stand-ins for BrandMark or the primary button remain', () => {
 test('primary: the one next step of each view, at most one per view (ADR 0063 D25)', () => {
   const views = {
     'console-ui/src/pages/login.tsx': '<Button type="submit" variant="primary"',
-    'console-ui/src/pages/dashboard.tsx': '<Button variant="primary" onClick={() => navigate(\'/scope\')}>',
+    'console-ui/src/pages/dashboard.tsx': '<Button variant="primary" size="sm" onClick={() => navigate(\'/scope\')}>',
     'console-ui/src/pages/access/audit.tsx': '<Button type="submit" size="sm" variant="primary"><Search />{i18n.t("筛选")}',
     'console-ui/src/pages/not-found.tsx': '<Button variant="primary" asChild><Link to={homePath}><Home />',
   }
@@ -77,7 +77,8 @@ test('destructive: solid red only on confirm buttons; entry points are the ghost
       if (!Object.hasOwn(solid, file)) assert.doesNotMatch(match[0], /destructive-solid/, `${file}: solid red outside a confirmation`)
     }
   }
-  assert.match(read('console-ui/src/pages/dashboard.tsx'), /<Button variant="destructive-outline" disabled=\{restarting\}/)
+  // 重启 sits on the overview hero card: a white button (soft cards, the Main design); it confirms first (useHostRestart).
+  assert.match(read('console-ui/src/pages/dashboard.tsx'), /<Button variant="white" size="sm" disabled=\{restarting\} onClick=\{\(\) => \{ void confirmRestart\(\) \}\}>/)
   assert.doesNotMatch(read('console-ui/src/pages/dashboard.css'), /console-danger-outline/)
 })
 

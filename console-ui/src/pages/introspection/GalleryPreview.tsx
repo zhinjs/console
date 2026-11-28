@@ -138,7 +138,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
             aria-label={i18n.t("预览画布宽度")}
             value={canvasWidth}
             onChange={e => setCanvasWidth(e.target.value as 'auto' | '380px' | '480px' | '540px')}
-            className="h-6 rounded border border-border bg-background px-1.5 text-xs text-foreground"
+            className="h-6 rounded border border-border bg-background px-2 text-xs text-foreground"
           >
             <option value="auto">{i18n.t("自适应宽")}</option>
             <option value="380px">380px</option>
@@ -149,7 +149,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
             aria-label={i18n.t("预览画布背景")}
             value={canvasBg}
             onChange={e => setCanvasBg(e.target.value as 'default' | 'dark' | 'grid')}
-            className="h-6 rounded border border-border bg-background px-1.5 text-xs text-foreground"
+            className="h-6 rounded border border-border bg-background px-2 text-xs text-foreground"
           >
             <option value="default">{i18n.t("默认底色")}</option>
             <option value="dark">{i18n.t("深色底")}</option>
@@ -158,7 +158,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
           <button
             type="button"
             onClick={() => setShowOutline(v => !v)}
-            className={`h-6 rounded border px-1.5 text-xs transition-colors ${showOutline ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
+            className={`h-6 rounded border px-2 text-xs transition-colors ${showOutline ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border bg-background text-muted-foreground hover:text-foreground'}`}
           >
             {i18n.t("📐 辅助线")}
           </button>
@@ -167,11 +167,11 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
     </div>
     {readOnly ? <span className="console-component-preview-state">{i18n.t("此连接不支持组件渲染")}</span>
       : loading ? <StatusState kind="loading" compact title={i18n.t("加载中")} />
-      : error ? <div className="console-component-preview-state console-component-preview-error"><span role="alert">{i18n.t("无法预览：")}{error}</span><Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); setAttempt(value => value + 1) }}>{i18n.t("重试预览")}</Button></div>
+      : error ? <div className="console-component-preview-state console-component-preview-error"><span role="alert">{i18n.t("无法预览：")}{error}</span><Button size="sm" variant="secondary" onClick={(event) => { event.stopPropagation(); setAttempt(value => value + 1) }}>{i18n.t("重试预览")}</Button></div>
       : <div className="px-3 pb-2"><div style={canvasWidth === 'auto' ? undefined : { maxWidth: canvasWidth, margin: '0 auto' }}><ComponentPreviewOutput output={output} showOutline={showOutline} canvasBg={canvasBg} /></div>{target && <RenderingDiagnostics rendering={rendering} preview />}</div>}
     {!readOnly && <details className="border-t p-3 text-xs" onClick={event => event.stopPropagation()}>
       <summary className="cursor-pointer">{i18n.t("调试预览 Props (JSON)")}</summary>
-      <p className="my-1.5 text-muted-foreground">{i18n.t("实时修改传入组件 render(props) 的参数以调试不同长度文案、状态或主题。")}</p>
+      <p className="my-2 text-muted-foreground">{i18n.t("实时修改传入组件 render(props) 的参数以调试不同长度文案、状态或主题。")}</p>
       <textarea
         aria-label={i18n.t("组件预览 Props JSON")}
         value={customPropsDraft}
@@ -182,13 +182,13 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
       {propsError && <div role="alert" className="mt-1 text-destructive">{propsError}</div>}
       <div className="mt-2 flex flex-wrap gap-2">
         <Button size="sm" onClick={applyCustomProps}>{i18n.t("应用 Props 预览")}</Button>
-        <Button size="sm" variant="outline" onClick={resetDefaultProps}>{i18n.t("重置默认 Props")}</Button>
+        <Button size="sm" variant="secondary" onClick={resetDefaultProps}>{i18n.t("重置默认 Props")}</Button>
       </div>
     </details>}
     {!readOnly && <details className="border-t p-3 text-xs" onClick={event => event.stopPropagation()}>
       <summary className="cursor-pointer">{i18n.t("按目标 Endpoint 预览")}</summary>
       <p className="my-2 text-muted-foreground">{i18n.t("不会发送消息或注册按钮回调；不运行出站中间件。实际发送记录是最终诊断依据。")}</p>
-      <Button size="sm" variant="outline" onClick={() => void loadEndpoints()}>{i18n.t("加载 Endpoint")}</Button>
+      <Button size="sm" variant="secondary" onClick={() => void loadEndpoints()}>{i18n.t("加载 Endpoint")}</Button>
       <div className="mt-2 grid gap-2">
         <label>Endpoint<SelectField className="mt-1 w-full" value={endpointIndex} onValueChange={setEndpointIndex} options={[{value: '', label: i18n.t("请选择")}, ...endpoints.map((endpoint, index) => ({value: String(index), label: `${endpoint.endpoint.adapter} / ${endpoint.name}${endpoint.connected ? '' : i18n.t("（离线）")}`}))]} /></label>
         <label>{i18n.t("会话类型")}<SelectField className="mt-1 w-full" value={kind} onValueChange={setKind} options={[{value: 'private', label: i18n.t("私聊")}, {value: 'group', label: i18n.t("群聊")}, {value: 'channel', label: i18n.t("频道")}]} /></label>
@@ -197,7 +197,7 @@ export function GalleryPreview({ item, readOnly }: { item: CapabilityItem; readO
         <Input aria-label={i18n.t("父级 ID")} placeholder={i18n.t("父级 ID（填写父级类型时必填）")} value={parentId} onChange={event => setParentId(event.target.value)} />
         <Input aria-label={i18n.t("线程 ID")} placeholder={i18n.t("线程 ID（可选）")} value={threadId} onChange={event => setThreadId(event.target.value)} />
         {targetError && <span role="alert" className="text-destructive">{targetError}</span>}
-        <div className="flex flex-wrap gap-2"><Button size="sm" onClick={previewTarget} disabled={endpointIndex === ''}>{i18n.t("目标预览")}</Button><Button size="sm" variant="outline" onClick={() => { setTarget(undefined); setAttempt(value => value + 1) }}>{i18n.t("作者预览")}</Button></div>
+        <div className="flex flex-wrap gap-2"><Button size="sm" onClick={previewTarget} disabled={endpointIndex === ''}>{i18n.t("目标预览")}</Button><Button size="sm" variant="secondary" onClick={() => { setTarget(undefined); setAttempt(value => value + 1) }}>{i18n.t("作者预览")}</Button></div>
       </div>
     </details>}
   </div>

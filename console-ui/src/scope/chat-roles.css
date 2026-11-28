@@ -30,7 +30,7 @@
 .console-chat-picker-option:hover:not(:disabled) { background: hsl(var(--foreground) / 0.04); }
 /* A simulated sender (zhinjs/zhin#1250 第 87 批) cannot be picked: muted text, no hover. */
 .console-chat-picker-option:disabled { cursor: not-allowed; color: hsl(var(--muted-foreground)); }
-.console-chat-picker-option.is-selected { background: hsl(var(--primary-action) / 0.16); background-image: linear-gradient(90deg, hsl(var(--primary-action-border)) var(--console-border-focus), transparent 0); }
+.console-chat-picker-option.is-selected { background: hsl(var(--console-primary-soft)); box-shadow: var(--console-selected-bar); }
 .console-chat-picker-name { grid-area: name; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--console-text-label); font-weight: var(--console-weight-strong); }
 .console-chat-picker-option code { grid-area: id; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-chat-picker-option em { grid-area: tag; color: hsl(var(--muted-foreground)); font-size: var(--console-text-label); font-style: normal; }
@@ -49,7 +49,7 @@
 .console-chat-identity-chip em { color: hsl(var(--muted-foreground)); font-style: normal; }
 .console-chat-person-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: hsl(var(--muted-foreground)); font-family: var(--console-font-mono); font-size: var(--console-text-label); }
 .console-chat-me-card { display: grid; gap: var(--console-space-4); padding: var(--console-space-4); }
-.console-chat-me.is-highlighted .console-chat-me-card { outline: var(--console-border-focus) solid hsl(var(--primary-action) / 0.5); outline-offset: 0; }
+.console-chat-me.is-highlighted .console-chat-me-card { outline: var(--console-border-focus) solid hsl(var(--console-primary-line)); outline-offset: 0; }
 .console-chat-me-person { display: grid; gap: var(--console-space-2); }
 .console-chat-me-head, .console-chat-member-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-2); min-width: 0; }
 .console-chat-me-head > svg, .console-chat-member-head > svg { width: 1rem; height: 1rem; color: hsl(var(--muted-foreground)); }

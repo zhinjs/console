@@ -121,7 +121,7 @@ function FileManageSession() {
         title={i18n.t("项目文件")}
         description={readOnly ? i18n.t("浏览工作空间中的配置文件和源代码（只读）") : i18n.t("浏览和编辑工作空间中的配置文件和源代码")}
         actions={
-          <Button className="file-control" variant="outline" size="sm" onClick={() => void loadTree().catch(() => {})} disabled={loading}>
+          <Button className="file-control" variant="secondary" size="sm" onClick={() => void loadTree().catch(() => {})} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
             {i18n.t("刷新")}</Button>
         }
@@ -148,14 +148,14 @@ function FileManageSession() {
                 <div className="px-2 py-2 border-b space-y-1">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-                    <Input type="search" aria-label={i18n.t("搜索文件名")} placeholder={i18n.t("搜索文件名…")} value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="pl-9" />
+                    <Input type="search" aria-label={i18n.t("搜索文件名")} placeholder={i18n.t("搜索文件名…")} value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="pl-10" />
                   </div>
                   {searching ? <p className="text-xs text-muted-foreground">{i18n.t("仅搜索已加载的目录：Host 文件树只返回有限层级，更深的文件不会出现在结果中。")}</p> : null}
                 </div>
               ) : null}
               {location && location.status !== 'found' && !searching ? (
-                <p className="flex items-start gap-1.5 px-3 py-2 border-b text-xs text-muted-foreground" role="status">
-                  <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+                <p className="flex items-start gap-2 px-3 py-2 border-b text-xs text-muted-foreground" role="status">
+                  <Info className="w-3.5 h-3.5 mt-1 shrink-0" aria-hidden="true" />
                   <span className="min-w-0 break-all">{location.status === 'beyond-tree'
                     ? i18n.t("{0} 超出 Host 文件树返回的目录深度，无法在文件树中定位，已直接打开。", [selectedFile ?? ''])
                     : location.status === 'directory'
@@ -175,7 +175,7 @@ function FileManageSession() {
                     <EmptyState compact title={i18n.t("等待读取文件列表")} />
                   ) : tree.length === 0 ? (
                     <StatusState kind="empty" compact className="mx-2 my-1" title={i18n.t("暂无文件")} description={i18n.t("项目目录里还没有可显示的文件。")}
-                      actions={retryTree ? <Button className="file-control" size="sm" variant="outline" onClick={retryTree}>{i18n.t("重新读取")}</Button> : undefined} />
+                      actions={retryTree ? <Button className="file-control" size="sm" variant="secondary" onClick={retryTree}>{i18n.t("重新读取")}</Button> : undefined} />
                   ) : search ? (
                     search.matches.length === 0 ? (
                       <p className="px-3 py-4 text-sm text-muted-foreground break-all">{i18n.t("已加载的目录中没有名称包含「{0}」的文件。", [searchQuery.trim()])}</p>
@@ -186,7 +186,7 @@ function FileManageSession() {
                             key={node.path}
                             type="button"
                             data-search-result="true"
-                            className={`w-full min-w-0 flex items-center gap-1.5 px-2 py-1 text-sm rounded-sm text-left hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${node.path === selectedFile ? 'bg-accent text-accent-foreground font-medium' : ''}`}
+                            className={`w-full min-w-0 flex items-center gap-2 px-2 py-1 text-sm rounded-sm text-left hover:bg-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${node.path === selectedFile ? 'bg-accent text-accent-foreground font-medium' : ''}`}
                             title={node.path}
                             aria-current={node.path === selectedFile ? 'true' : undefined}
                             onClick={() => chooseSearchResult(node.path)}

@@ -76,7 +76,7 @@ export function ConnectionIndicator() {
         </p>
         {reason ? <p className="console-connection-popover-text">{i18n.t('原因：{0}', [reason])}</p> : null}
         <div className="console-connection-popover-actions">
-          <Button size="sm" variant="outline" onClick={retry} disabled={retrying}><RefreshCw className={retrying ? 'animate-spin' : ''} />{i18n.t('重试')}</Button>
+          <Button size="sm" variant="secondary" onClick={retry} disabled={retrying}><RefreshCw className={retrying ? 'animate-spin' : ''} />{i18n.t('重试')}</Button>
           <Button asChild size="sm" variant="ghost"><Link to={CONSOLE_PATHS.opsSelfCheck}><Stethoscope />{i18n.t('连接自检')}</Link></Button>
         </div>
       </PopoverContent>

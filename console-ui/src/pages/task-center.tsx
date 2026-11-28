@@ -33,7 +33,7 @@ function savedPending() {
 export function TaskTargetSummary({ target, accountName }: { target: DiagnosticConversation; accountName?: string }) {
   const i18n = useI18n()
   const kind = (value: string) => ({ private: i18n.t("私聊"), group: i18n.t("群聊"), channel: i18n.t("频道") })[value] ?? value
-  return <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
+  return <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
     <dt className="text-muted-foreground">{accountName ? i18n.t("投递账号") : i18n.t("账号")}</dt><dd className="break-all">{accountName || JSON.stringify(target.endpoint.id).slice(1, -1)}</dd>
     <dt className="text-muted-foreground">{i18n.t("会话")}</dt><dd className="break-all">{kind(target.kind)} · {target.id}</dd>
     {target.parent && <><dt className="text-muted-foreground">{i18n.t("父容器")}</dt><dd className="break-all">{kind(target.parent.kind)} · {target.parent.id}</dd></>}
@@ -222,7 +222,7 @@ export default function TaskCenterPage() {
     ? provider.effects : review?.effects ?? []
 
   return <div className="console-page console-resource-page console-tasks-page">
-    <div className="flex justify-end"><Button variant="outline" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
+    <div className="flex justify-end"><Button variant="secondary" size="sm" disabled={loading || busy || !current} onClick={() => { void refresh(); void loadUseCases() }}><RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新核对")}</Button></div>
     <HostToolApprovalsPanel />
     <HostSelfChangesPanel />
     {readOnly && <Alert><AlertDescription>{writeAccess.missing.length
@@ -231,7 +231,7 @@ export default function TaskCenterPage() {
     {error && current && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {notice && current && <Alert><AlertDescription>{notice}</AlertDescription></Alert>}
     {pending && current && <Alert><AlertDescription>{i18n.t("保留操作 ID：")}<code className="break-all">{pending.requestId}</code>。{busy ? i18n.t("等待当前操作回执。") : i18n.t("结果尚未确认，写操作已锁定。请只读核对任务与目标会话；没有匹配的持久确认不能视为未执行。")}
-      {pending.scope !== scope && <div className="mt-2 space-y-2"><p>{i18n.t("连接身份已变化，请确认当前 Host 与账号确实有权核对原操作。不会用其他 Host 的结果冒认。")}</p><Button size="sm" variant="outline" disabled={readOnly || pending.host !== getApiBase() || !catalog} onClick={() => {
+      {pending.scope !== scope && <div className="mt-2 space-y-2"><p>{i18n.t("连接身份已变化，请确认当前 Host 与账号确实有权核对原操作。不会用其他 Host 的结果冒认。")}</p><Button size="sm" variant="secondary" disabled={readOnly || pending.host !== getApiBase() || !catalog} onClick={() => {
         if (!scope || pending.host !== getApiBase()) return
         const acknowledged = { ...pending, scope }; sessionStorage.setItem(pendingStorageKey(), JSON.stringify(acknowledged)); pendingRef.current = acknowledged; setPending(acknowledged); void refresh()
       }}>{i18n.t("确认以当前身份只读核对原操作")}</Button></div>}
@@ -241,12 +241,12 @@ export default function TaskCenterPage() {
       <Card className="console-task-use-cases"><CardHeader><CardTitle>{i18n.t("按用途开始")}</CardTitle></CardHeader><CardContent className="space-y-3">
         {useCaseError && <p className="text-xs text-muted-foreground">{useCaseError}</p>}
         {useCases.map(item => <details key={item.id} className="console-disclosure-card"><summary className="font-medium">{item.title}</summary><div className="space-y-3 pt-3 text-sm"><p>{item.summary}</p><ol className="list-decimal pl-5 space-y-1">{item.steps.map(step => <li key={step}>{step}</li>)}</ol><ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">{item.limitations.map(limitation => <li key={limitation}>{limitation}</li>)}</ul>
-          <p className="text-xs break-all">{i18n.t("插件包：")}<code>{item.packageName}</code>{i18n.t("（可选中复制）")}</p><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("到市场查看安装计划")}</Link></Button><Button asChild size="sm" variant="outline"><Link to="/plugins">{i18n.t("管理插件实例")}</Link></Button>
+          <p className="text-xs break-all">{i18n.t("插件包：")}<code>{item.packageName}</code>{i18n.t("（可选中复制）")}</p><div className="flex flex-wrap gap-2"><Button asChild size="sm" variant="secondary"><Link to="/marketplace">{i18n.t("到市场查看安装计划")}</Link></Button><Button asChild size="sm" variant="secondary"><Link to="/plugins">{i18n.t("管理插件实例")}</Link></Button>
             {item.id === 'group-welcome' && item.mode === 'plugin-configuration' && <Button asChild size="sm"><Link to="/use-cases/group-welcome">{i18n.t("开始群欢迎配置流程")}</Link></Button>}
             {item.mode === 'administrator-task' && catalog?.providers.filter(candidate => candidate.packageName === item.packageName).map(candidate => <Button key={candidate.owner} size="sm" disabled={disabled} onClick={() => chooseProvider(candidate.owner)}>{i18n.t("配置 ")}{candidate.title} · {candidate.owner}</Button>)}
           </div>{item.mode === 'administrator-task' && !catalog?.providers.some(candidate => candidate.packageName === item.packageName) && <p className="text-xs text-muted-foreground">{i18n.t("尚无该软件包已加载的任务提供方；安装后还需配置、应用并回到此页刷新。")}</p>}</div></details>)}
       </CardContent></Card>
-      {catalog && !catalog.providers.length && <Card><CardContent className="p-5 space-y-3"><p>{i18n.t("尚无可用的管理员任务提供方。请安装并启用相应用途插件，再返回刷新。")}</p><Button asChild variant="outline"><Link to="/marketplace">{i18n.t("前往插件市场")}</Link></Button></CardContent></Card>}
+      {catalog && !catalog.providers.length && <Card><CardContent className="p-5 space-y-3"><p>{i18n.t("尚无可用的管理员任务提供方。请安装并启用相应用途插件，再返回刷新。")}</p><Button asChild variant="secondary"><Link to="/marketplace">{i18n.t("前往插件市场")}</Link></Button></CardContent></Card>}
       {!!catalog?.providers.length && <div className="console-task-workspace grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
         <div className="space-y-4"><Card className="console-task-setup"><CardHeader><CardTitle>{i18n.t("选择用途")}</CardTitle></CardHeader><CardContent className="space-y-3">
           <SelectField aria-label={i18n.t("任务用途")} value={selectedOwner} disabled={busy || !!pending} onValueChange={chooseProvider} options={[{ value: '', label: i18n.t("请选择用途提供方") }, ...catalog.providers.map(item => ({ value: item.owner, label: <>{item.title} · {item.owner}</> }))]} />
@@ -254,7 +254,7 @@ export default function TaskCenterPage() {
         </CardContent></Card>
         {base && <Card className="console-task-form"><CardHeader><CardTitle>{editTask ? i18n.t("修改任务参数") : i18n.t("配置管理员任务")}</CardTitle></CardHeader><CardContent className="space-y-4">
           {stale && <Alert><AlertDescription>{i18n.t("草稿基于旧运行代或旧修订，不能直接提交；刷新不会为旧草稿背书。")}</AlertDescription></Alert>}
-          {!editTask ? <fieldset className="space-y-3"><legend className="font-medium text-sm">{i18n.t("投递目标")}</legend><Button variant="outline" size="sm" disabled={disabled} onClick={() => void loadEndpoints()}>{i18n.t("读取账号列表")}</Button>
+          {!editTask ? <fieldset className="space-y-3"><legend className="font-medium text-sm">{i18n.t("投递目标")}</legend><Button variant="secondary" size="sm" disabled={disabled} onClick={() => void loadEndpoints()}>{i18n.t("读取账号列表")}</Button>
             {endpointError && <p className="text-xs text-destructive">{endpointError}</p>}
             <SelectField aria-label={i18n.t("投递账号")} value={endpointKey} disabled={disabled} onValueChange={value => { setEndpointKey(value); setTargetFields(emptyTarget) }} options={[{ value: '', label: i18n.t("请选择账号") }, ...endpoints.map(item => ({ value: JSON.stringify(item.endpoint), label: <>{item.name} · {item.endpoint.adapter} · {item.connected ? i18n.t("已连接") : i18n.t("未连接")}</> }))]} />
             {selectedEndpoint ? <TaskConversationChoice endpoint={selectedEndpoint.endpoint} disabled={disabled} selected={targetFields} onPick={(kind, id) => setTargetFields(current => ({ ...current, kind, id }))} /> : null}
@@ -273,10 +273,10 @@ export default function TaskCenterPage() {
           {form.unsupported ? <Alert><AlertDescription>{form.unsupported}</AlertDescription></Alert> : <fieldset disabled={disabled} className="space-y-3">{Object.entries(form.fields).map(([key, field]) => <SchemaFieldEditor key={key} name={key} field={field} value={parameters[key]} allowEnvironmentReferences={false} onChange={value => setParameters(previous => { const next = { ...previous }; if (value ===undefined) delete next[key]; else Object.defineProperty(next, key, { value, enumerable: true, writable: true, configurable: true }); return next })} />)}</fieldset>}
           {!!issues.length && <ul className="text-xs text-muted-foreground list-disc pl-4">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>}
           <div className="flex flex-wrap gap-2"><Button disabled={disabled || stale || !targetPreview || !!issues.length || !!form.unsupported} onClick={prepareCreateOrUpdate}>{editTask ? i18n.t("核对修改") : i18n.t("核对并创建")}</Button>
-            {stale && provider && <Button variant="outline" disabled={disabled} onClick={() => { setBase({ generation: catalog.generation, provider }); setNotice(i18n.t("已明确采用当前版本，请重新核对全部参数、目标与副作用后提交。")) }}>{i18n.t("采用当前版本，保留草稿")}</Button>}
+            {stale && provider && <Button variant="secondary" disabled={disabled} onClick={() => { setBase({ generation: catalog.generation, provider }); setNotice(i18n.t("已明确采用当前版本，请重新核对全部参数、目标与副作用后提交。")) }}>{i18n.t("采用当前版本，保留草稿")}</Button>}
             <Button variant="ghost" disabled={busy || !!pending} onClick={() => chooseProvider(selectedOwner)}>{i18n.t("清空并重新配置")}</Button></div>
         </CardContent></Card>}
-        {!base && provider && <Button variant="outline" disabled={disabled} onClick={() => chooseProvider(selectedOwner)}>{i18n.t("为此用途创建新任务")}</Button>}
+        {!base && provider && <Button variant="secondary" disabled={disabled} onClick={() => chooseProvider(selectedOwner)}>{i18n.t("为此用途创建新任务")}</Button>}
         </div>
         <div className="console-task-list space-y-3"><h2 className="font-medium">{provider ? i18n.t("{0} · 管理员任务", [provider.title]) : i18n.t("请选择用途查看任务")}</h2>{provider && !provider.tasks.length && <p className="text-sm text-muted-foreground">{i18n.t("当前没有管理员任务。")}</p>}{provider?.tasks.map(task => <AdminTaskCard key={task.id} task={task} disabled={disabled} onAction={act} />)}</div>
       </div>}
@@ -289,6 +289,6 @@ export default function TaskCenterPage() {
         <TaskParameterSummary schema={review.schema} parameters={review.parameters} timezone={review.timezone} />
         <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">{i18n.t("完整身份与参数")}</summary><pre className="whitespace-pre-wrap break-all pt-2">{JSON.stringify({ target: review.target, parameters: review.parameters }, null, 2)}</pre></details>
       </div>}
-      <DialogFooter className="gap-2 sm:space-x-0"><Button variant="outline" onClick={() => setReview(null)}>{i18n.t("返回检查")}</Button><Button disabled={disabled} onClick={() => void submit()}>{i18n.t("确认一次提交")}</Button></DialogFooter></DialogContent></Dialog>
+      <DialogFooter className="gap-2 sm:space-x-0"><Button variant="secondary" onClick={() => setReview(null)}>{i18n.t("返回检查")}</Button><Button disabled={disabled} onClick={() => void submit()}>{i18n.t("确认一次提交")}</Button></DialogFooter></DialogContent></Dialog>
   </div>
 }

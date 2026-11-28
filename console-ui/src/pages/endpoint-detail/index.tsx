@@ -120,7 +120,7 @@ const MAX_MUTE_MINUTES = 43200
 function MuteDurationField({ valueRef }: { valueRef: { current: string } }) {
   const i18n = useI18n()
   const [value, setValue] = useState(valueRef.current)
-  return <label className="block space-y-1.5 text-sm">
+  return <label className="block space-y-2 text-sm">
     <span className="font-medium">{i18n.t("禁言时长（分钟）")}</span>
     <Input type="number" min={1} max={MAX_MUTE_MINUTES} inputMode="numeric" value={value}
       onChange={(event) => { setValue(event.target.value); valueRef.current = event.target.value }} />
@@ -520,7 +520,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
         <div className="im-member-panel-title">
           <div>
             <Title className="text-sm font-semibold">{i18n.t("群成员与管理")}</Title>
-            <Description className="text-xs text-muted-foreground mt-0.5">{i18n.t("仅 ICQQ 群聊")}</Description>
+            <Description className="text-xs text-muted-foreground mt-1">{i18n.t("仅 ICQQ 群聊")}</Description>
           </div>
           <Badge variant="secondary" className="im-member-total">
             {memberCounts.total}
@@ -530,7 +530,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
       <div className="im-right-actions p-2 border-b border-border/60">
         <Button
           size="sm"
-          variant="outline"
+          variant="secondary"
           className="im-secondary-action w-full"
           onClick={() => void loadMembers()}
           disabled={membersLoading}
@@ -578,7 +578,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
           return (
             <div
               key={`${uid}-${item.index}`}
-              className={cn('im-member-card flex flex-col gap-1.5 text-xs p-2 border border-border/70 rounded-md bg-background/60', `im-member-card--${roleKind}`)}
+              className={cn('im-member-card flex flex-col gap-2 text-xs p-2 border border-border/70 rounded-md bg-background/60', `im-member-card--${roleKind}`)}
             >
               <div className="im-member-card-main">
                 <span className="im-member-avatar">
@@ -614,7 +614,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   {i18n.t("踢")}</Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_MUTE, uid, item.name)
                   }
@@ -622,7 +622,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   {i18n.t("禁言")}</Button>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() =>
                     void handleGroupAction(ENDPOINT_RPC.GROUP_ADMIN, uid, item.name, { enable: roleKind !== 'admin' })
                   }
@@ -855,7 +855,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="im-tool-button h-8 px-2 text-xs"
                     title={i18n.t("插入 QQ 表情段")}
@@ -971,7 +971,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   {i18n.t("请求")}</h2>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   className="im-secondary-action"
                   disabled={requestsTab === 'history' ? inboxRequestsLoading : requestsLoading}
                   onClick={() => void (requestsTab === 'history' ? loadInboxRequests(false) : loadRequestsFromServer())}
@@ -1069,7 +1069,7 @@ function EndpointWorkspace({ target, mode = 'account', onSelectionChange, onBack
                   {i18n.t("通知")}</h2>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="secondary"
                   className="im-secondary-action"
                   onClick={() => void refreshNotices()}
                 >

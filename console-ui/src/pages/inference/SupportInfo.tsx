@@ -16,7 +16,7 @@ export function SupportLabel({ label, support }: {
       title={typeof label === 'string' ? label : undefined}
     >
       <span className="truncate">{label}</span>
-      <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-xs">
+      <Badge variant="outline" className="shrink-0 px-2 py-0 text-xs">
         {i18n.t('实验')}
       </Badge>
     </span>

@@ -14,6 +14,8 @@ import * as scopeTree from '../console-ui/src/scope/scope-tree.mjs'
 import * as scopeFilter from '../console-ui/src/pages/insights/scope-filter.mjs'
 import * as sessionLabels from '../console-ui/src/utils/session-label.mjs'
 import * as consoleProtocol from '@zhin.js/console-protocol'
+import * as featureDisabled from '../console-ui/src/utils/feature-disabled.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 
 const require = createRequire(import.meta.url)
 const options = { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
@@ -52,7 +54,7 @@ function fixture(initialKey = 'icqq:bot:group:room', granted = null) {
     '@zhin.js/console-ui': { cn:(...parts)=>parts.filter(Boolean).join(' '), PageHeader:'page-header', ErrorAlert:'error-alert', EmptyState:'empty-state', Alert:'alert', AlertDescription:'alert-description', Badge:'badge', Button:'button', Skeleton:'skeleton', Tabs:'tabs', TabsList:'tabs-list', TabsTrigger:'tabs-trigger', TabsContent:'tabs-content', ...(ui), StatCard:'stat-card', StatGrid:'stat-grid' }, '../components/AgentSessionPicker':{AgentSessionPicker:'session-picker'},
     './SessionMessageDetails':{SessionMessageDetails:'message-details'}, './ConversationHistory':{ConversationHistory:'conversation-history'},
     './ConversationTrace':{ConversationTrace:'conversation-trace'}, './useConversationTraces':{useConversationTraces:(...args)=>{ traceReads.push(args); return {turns:[],loading:false,error:null,refresh(){}} }},
-    '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}},
+    '@zhin.js/client':{cn:(...parts)=>parts.filter(Boolean).join(' ')}, '../contracts/zhin-console':{CONSOLE_REST:{AGENT_SESSIONS:'/api/agent/sessions'}}, '../utils/feature-disabled.mjs': featureDisabled, '../console-routes.mjs': consoleRoutes,
     '../utils/console-access.mjs':{hasConsolePermission:name=>!granted||granted.has(name)}, '../utils/http-permission.mjs':httpPermission, './agent-sessions-description.mjs':sessionsDescription, './access/access-model.mjs':accessModel, './agent-session-recent.mjs':{readRecentSessions,summarizeRecentSessions,sessionsNeedingGroupNames,withGroupNames}, './AmbientGroupPicker':{useAmbientGroupCatalog:()=>({loading:false,error:null,catalog:null,retry(){}})}, './ambient-group-picker-model.mjs':{groupNamesFromCatalog:()=>new Map()}, })
   const f = {calls,traceReads,render(){cursor=0;tree=module.default(); const run=effects;effects=[];run.forEach(fn=>fn());return tree},get tree(){return tree},setScope(value){scope=value},navigate(key){params=new URLSearchParams({sessionKey:key})},close(){slots.forEach(slot=>slot?.cleanup?.())}}
   f.render();return f
@@ -208,6 +210,43 @@ test('already-authorized recent personal sessions stay visible without querying 
   f.close()
 })
 
+
+// zhinjs/zhin#1250 disabled-feature-as-read-failure: the recent list is the Agent's trace archive. Without
+// the Agent the Host answers 503 「未安装 @zhin.js/agent，无法读取 trace」 (older 「Agent Runtime 尚未就绪」):
+// the page says the AI agent is not set up and where to set it up, not 「最近会话未能读取」.
+test('chat history without an Agent says the recent list needs the AI agent, not that it failed to read', async () => {
+  for (const error of ['未安装 @zhin.js/agent，无法读取 trace', 'Agent Runtime 尚未就绪']) {
+    const f = fixture()
+    f.calls.find(call => call.url.endsWith('/trace-archive/sessions')).resolve({ ok: false, status: 503, json: async () => ({ success: false, error }) })
+    await settle(); f.render()
+    const page = text(f.tree)
+    assert.match(page, /最近会话需要 AI 智能体（@zhin\.js\/agent）/, error)
+    assert.match(page, /下面只显示本机历史/)
+    assert.doesNotMatch(page, /最近会话未能读取/, error)
+    assert.ok(elements(f.tree).some(node => node.type === 'a' && node.props.to === '/features/ai'), 'links to AI setup')
+    assert.ok(elements(f.tree).some(node => node.type === 'stat-card' && node.props.sub === 'AI 智能体未启用'))
+    f.close()
+  }
+})
+
+test('chat history keeps 「最近会话未能读取」 for real failures (permission, other 503, unreadable reply, network)', async () => {
+  const replies = [
+    { ok: false, status: 403, json: async () => ({ success: false, error: 'Agent Runtime 尚未就绪' }) },
+    { ok: false, status: 503, json: async () => ({ success: false, code: 'instance_unavailable', error: 'The Zhin instance is not running' }) },
+    { ok: false, status: 500, json: async () => { throw new SyntaxError('not json') } },
+  ]
+  for (const reply of [...replies, null]) {
+    const f = fixture()
+    const call = f.calls.find(call => call.url.endsWith('/trace-archive/sessions'))
+    if (reply) call.resolve(reply)
+    else call.resolve(Promise.reject(new TypeError('Failed to fetch')))
+    await settle(); await settle(); f.render()
+    const page = text(f.tree)
+    assert.match(page, /最近会话未能读取，仅显示本机历史。/, String(reply?.status ?? 'network'))
+    assert.doesNotMatch(page, /需要 AI 智能体/)
+    f.close()
+  }
+})
 
 test('personal sessions open on the trace tab and explain, without an error, that the conversation is not shown here (it is not lost)', () => {
   const key = `personal-session:v1:${'e'.repeat(64)}`

@@ -89,7 +89,6 @@ export const adminMessages = Object.freeze({
   "重启实例": "Restart the instance",
   "机器人短暂离线，正在进行的对话可能中断": "The bot is briefly offline; conversations in progress may be interrupted",
   "网关等待新实例就绪": "The gateway waits for the new instance to be ready",
-  "实例 ID": "Instance ID",
   "下一步：查看下方实例日志找到原因（常见：依赖未安装、配置缺少必填项、环境变量为空），修复后点「启动」。依赖问题可在「项目依赖」里重新安装。": "Next: find the cause in the instance logs below (often a missing dependency, a required setting or an empty environment variable), fix it, then press Start. Reinstall dependencies under Project dependencies.",
   "还没有日志。实例启动后，标准输出与标准错误会出现在这里。": "No logs yet. Standard output and error appear here once the instance starts.",
   "网关没有返回事务结果。": "The gateway returned no transaction result.",

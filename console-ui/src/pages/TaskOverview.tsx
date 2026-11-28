@@ -99,7 +99,7 @@ export function TaskOverview({ connectionScope, onSources, readable }: {
           })}
         </div>
         <span className="flex-1" />
-        <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+        <Button variant="secondary" size="sm" onClick={() => void load()} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
       </div>
       {unavailable.length && !allFailed ? (
         <p className="text-xs text-[hsl(var(--warning))]" role="status">
@@ -115,13 +115,13 @@ export function TaskOverview({ connectionScope, onSources, readable }: {
         filter === 'all' ? (
           <StatusState kind="empty" illustration="tasks" title={i18n.t("还没有任务")}
             description={readsAdmin ? i18n.t("管理员任务在「管理员任务」页签创建；定时提醒由插件或 AI 助手创建。") : i18n.t("定时提醒由插件或 AI 助手创建。")}
-            actions={readsAdmin ? <Button asChild size="sm" variant="outline"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button> : undefined} />
+            actions={readsAdmin ? <Button asChild size="sm" variant="secondary"><Link to={taskTabHref('admin')}>{i18n.t("创建管理员任务")}</Link></Button> : undefined} />
         ) : (
           <StatusState kind="empty" title={filter === 'attention' ? i18n.t("没有需要处理的任务") : i18n.t("没有已暂停的任务")}
             description={filter === 'attention'
               ? i18n.t("运行失败、结果不确定的任务和等待审批的工具调用会列在这里。")
               : i18n.t("暂停的任务会列在这里，到它所在的页签恢复。")}
-            actions={<Button size="sm" variant="outline" onClick={() => setFilter('all')}>{i18n.t("查看全部任务")}</Button>} />
+            actions={<Button size="sm" variant="secondary" onClick={() => setFilter('all')}>{i18n.t("查看全部任务")}</Button>} />
         )
       ) : (
         <OverviewTable rows={shown} time={time} canRead={canRead} />

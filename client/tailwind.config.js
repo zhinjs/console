@@ -17,6 +17,18 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Soft-card roles of @zhin.js/console-ui 1.3.0 (ADR 0063 D34), for the Console's own classes.
+        surface: 'hsl(var(--console-surface))',
+        sunken: 'hsl(var(--console-sunken))',
+        raised: 'hsl(var(--console-raised))',
+        ink: 'hsl(var(--console-ink))',
+        faint: 'hsl(var(--console-faint))',
+        'primary-soft': 'hsl(var(--console-primary-soft))',
+        ok: { DEFAULT: 'hsl(var(--console-ok))', bg: 'hsl(var(--console-ok-bg))' },
+        warn: { DEFAULT: 'hsl(var(--console-warn))', bg: 'hsl(var(--console-warn-bg))' },
+        danger: { DEFAULT: 'hsl(var(--console-danger))', bg: 'hsl(var(--console-danger-bg))' },
+        progress: 'hsl(var(--console-progress))',
+        ...Object.fromEntries([1, 2, 3, 4, 5].flatMap((n) => [[`tint-${n}`, `hsl(var(--console-tint-${n}))`], [`accent-${n}`, `hsl(var(--console-accent-${n}))`]])),
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -73,11 +85,13 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
       },
+      // The soft-card radii (console-ui 1.3.0): 6 · 10 · 14 · 18 · 24, all on the library's r-1 … r-6.
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-        xl: 'var(--console-radius-xl)',
+        DEFAULT: 'var(--console-radius-1)',
+        sm: 'var(--console-radius-2)',
+        md: 'var(--console-radius-3)',
+        lg: 'var(--console-radius-4)',
+        xl: 'var(--console-radius-6)',
       },
       boxShadow: {
         'console-xs': 'var(--console-shadow-xs)',

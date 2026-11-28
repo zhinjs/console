@@ -57,7 +57,7 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ## 导航
 
-导航按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）。宽屏（≥1100px）时它们排在页面顶部的悬浮导航栏里：只有一个页面的区是直接链接，有多个页面的区点开是下拉菜单；更窄的屏幕把同样的导航放进左侧抽屉（左上角菜单按钮打开，Esc 或点遮罩关闭）。导航栏右侧是快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、实时连接状态、语言、外观、个人设置与退出：
+导航按 zhinjs/zhin ADR 0052 分为六个区，前四个是「日常」，后两个是「管理」（`console-ui/src/navigation-sections.mjs`，路由表 `console-ui/src/console-routes.mjs`）。外壳按 `@zhin.js/console-ui` 1.3.0「柔光卡片」设计稿（Main）绘制：宽于 48rem 时，页面顶部是随页面滚动的顶栏——左边品牌，中间六个区（当前区是带名字的黑色 NavPill，其余是圆形 NavIcon，点开进入该区第一个页面），右边是快速跳转（Ctrl/⌘ K）、底部日志面板（Ctrl `）、需要你处理、实时连接状态和圆形账号按钮（个人设置、界面语言、显示模式、退出）。当前区的页面以 Chip 排在顶栏下方（「功能」分「核心」与「插件页面」两组；「访问控制」的四个页面用分段控件切换）；一级页面顶部有极光背景。手机（< 48rem）把区放进底部悬浮的 TabBar（前四个区 +「更多」，「更多」打开列出全部页面的抽屉，Esc 或点遮罩关闭）。内容最宽 1280px（组件库的 `data` 宽度）。
 
 | 区 | 菜单里的页面 | 不在菜单里、从上级页面进入 |
 |------|------|------|
@@ -106,7 +106,11 @@ Console 没有单独的演示构建：公开演示是一台真实 Host，访客�
 
 ### SDK 版本
 
-只使用一代 SDK（zhin 1.11 发布线）：`@zhin.js/client` 1.5.x、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.9.x、`@zhin.js/console-protocol` 1.10.x、`@zhin.js/console-ui` 1.2.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
+`@zhin.js/console-ui` 1.3.0 起按「柔光卡片」规范绘制（zhinjs/zhin ADR 0063 D34–D41）：Console 不再定义自己的调色板、`data-palette` 配色与同名的尺寸变量，颜色、字号、圆角、阴影与动效全部来自组件库（`console-ui/src/theme-tokens.css` 只剩几条指向组件库令牌的旧名字）。`@zhin.js/client` 精确依赖 `@zhin.js/console-ui`，所以两者一起升级（client 1.5.2 依赖 console-ui 1.3.0），否则 lockfile 里会有两份 console-ui。
+
+**最低支持 `@zhin.js/adapter-sandbox` 1.2.0。** 1.2.0 起 Sandbox 的远程 Entry 自带样式（用 console-ui 组件），Console 删除了为旧版 Agent playground 保留的 `agent-playground.css` 与 Tailwind 类名清单 `remote-entry-style-contract.ts`；更早的 Sandbox 在本 Console 中会缺少样式，需要先升级。
+
+只使用一代 SDK（zhin 1.11 发布线）：`@zhin.js/client` 1.5.x（≥ 1.5.2）、`@zhin.js/contract` 1.1.x、`@zhin.js/ai` 1.9.x、`@zhin.js/console-protocol` 1.10.x、`@zhin.js/console-ui` 1.3.x，与 zhin 仓库 `packages/console/*` 当前发布线一致（npm 的 `latest`）。`package.json` 对每个 `@zhin.js/*` 依赖都用 `~` 范围：npm 上还有不属于这条线的 `@zhin.js/client` 2.x，`^` 会把它装进来，并在 lockfile 里产生第二份 contract / console-protocol / ai；新的 minor 也要先在 Console 里核对后再升级。`tests/console-contract.test.mjs` 检查这些范围，以及 lockfile 里每个包只有一个版本。
 
 Console 需要的协议常量、类型与打码规则都直接从已发布的包导入，不再保留本地替身：打码与占位判断（`maskConsoleEnvValue` / `isConsoleEnvMaskPlaceholder`）、聊天成员 RPC 与类型（`CHAT_PRINCIPALS_RPC`、`ConsoleChatPrincipal` 等）、「需要你处理」的 RPC 与类型（`ATTENTION_RPC`、`ConsoleAttentionKind`）、Login Assist 的 RPC 与枚举、全局插件开关的权限判断，以及 `@zhin.js/client` 的 headless 账号 API（`AdapterAccountsProvider` / `useAdapterAccounts` / `AdapterAccountRow`）。AI 与模型页的推理视图类型（`environmentReferences`、`lastCall`、拒绝原因等）定义在 Host 端的 `@zhin.js/agent`，`@zhin.js/console-protocol` 1.4.0 没有导出，所以仍在 `console-ui/src/pages/inference/model.d.mts` 里声明。对旧 Host 的检测与降级保持不变：缺少某个 RPC 或字段时，相应入口隐藏或退回旧界面。
 

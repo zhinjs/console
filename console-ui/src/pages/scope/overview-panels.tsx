@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Bot, Cable, ChevronRight, KeyRound, MessageSquare, MessagesSquare, Plus, RefreshCw, Search, SlidersHorizontal } from 'lucide-react'
-import { Badge, Button, Card, cn, Input, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@zhin.js/console-ui'
+import { Badge, Button, Card, cn, HeroCard, Input, Segmented, Skeleton, StatusDot, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Tile } from '@zhin.js/console-ui'
 import { useI18n } from '../../i18n'
 import { StatusState } from '../../components/StatusState'
 import { adapterHref, conversationHref, endpointHref } from '../../console-routes.mjs'
@@ -66,7 +66,7 @@ function OnboardingSection({ first }: { first: boolean }) {
               <span className="text-sm font-semibold text-foreground">{i18n.t(platform.title)}</span>
               <span className="console-platform-brand-badge max-sm:hidden">{i18n.t(platform.badge)}</span>
             </span>
-            <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground max-sm:hidden">{i18n.t(platform.desc)}</span>
+            <span className="mt-2 block text-xs leading-relaxed text-muted-foreground max-sm:hidden">{i18n.t(platform.desc)}</span>
             <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">{target.install ? i18n.t('先安装适配器') : i18n.t('前往接入')}<ChevronRight className="h-3.5 w-3.5" aria-hidden="true" /></span>
           </Link>
           )
@@ -114,21 +114,21 @@ function AccountTable({ endpoints, tasks, showAdapter, label, configuredOnly, ma
                 <Link to={endpointHref(endpoint.adapter, endpoint.name)} className="console-scope-row-link" title={`${endpoint.adapter} / ${endpoint.name}`}>
                   <Bot aria-hidden="true" /><span className="truncate">{endpoint.name}</span>
                 </Link>
-                {showAdapter ? <span className="mt-0.5 block text-xs text-muted-foreground md:hidden">{endpoint.adapter}</span> : null}
+                {showAdapter ? <span className="mt-1 block text-xs text-muted-foreground md:hidden">{endpoint.adapter}</span> : null}
               </TableCell>
               {showAdapter ? (
                 <TableCell className="max-md:hidden"><Link to={adapterHref(endpoint.adapter)} className="text-sm hover:underline"><code>{endpoint.adapter}</code></Link></TableCell>
               ) : null}
               <TableCell>
-                <span className="inline-flex flex-col items-start gap-0.5">
+                <span className="inline-flex flex-col items-start gap-1">
                   <AccountStatusBadge endpoint={endpoint} tasks={tasks} />
                   <span className="text-xs text-muted-foreground max-md:hidden">{i18n.t(endpointLifecycleLabel(endpoint))}</span>
                 </span>
               </TableCell>
               <TableCell className="max-md:hidden">{pending ? <Badge variant="warning" size="sm">{i18n.t('{0} 条', [pending])}</Badge> : <span className="text-muted-foreground">—</span>}</TableCell>
               <TableCell className="text-right">
-                <span className="inline-flex flex-wrap justify-end gap-1.5">
-                  <Button asChild variant="outline" size="sm"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'chat')} aria-label={i18n.t('聊天')}><MessageSquare />{i18n.t('聊天')}</Link></Button>
+                <span className="inline-flex flex-wrap justify-end gap-2">
+                  <Button asChild variant="secondary" size="sm"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'chat')} aria-label={i18n.t('聊天')}><MessageSquare />{i18n.t('聊天')}</Link></Button>
                   <Button asChild variant="ghost" size="sm" className="max-md:hidden"><Link to={endpointHref(endpoint.adapter, endpoint.name, 'access')}><KeyRound />{i18n.t('接入')}</Link></Button>
                   {managedRows.get(endpoint.name) ? <ManagedAccountControls row={managedRows.get(endpoint.name)!} /> : null}
                 </span>
@@ -146,14 +146,14 @@ function AccountTable({ endpoints, tasks, showAdapter, label, configuredOnly, ma
             </TableCell>
             {showAdapter ? <TableCell className="max-md:hidden"><code>{configuredOnly.adapter}</code></TableCell> : null}
             <TableCell>
-              <span className="inline-flex flex-col items-start gap-0.5">
+              <span className="inline-flex flex-col items-start gap-1">
                 <Badge variant="outline" size="sm" className="whitespace-nowrap">{i18n.t('仅在配置中')}</Badge>
                 <span className="text-xs text-muted-foreground max-md:hidden">{i18n.t('当前未运行')}</span>
               </span>
             </TableCell>
             <TableCell className="max-md:hidden"><span className="text-muted-foreground">—</span></TableCell>
             <TableCell className="text-right">
-              <span className="inline-flex flex-wrap justify-end gap-1.5"><ConfiguredAccountActions adapter={configuredOnly.adapter} endpoint={id} /></span>
+              <span className="inline-flex flex-wrap justify-end gap-2"><ConfiguredAccountActions adapter={configuredOnly.adapter} endpoint={id} /></span>
             </TableCell>
           </TableRow>
         )) : null}
@@ -175,22 +175,35 @@ function ManagedOnlyRow({ adapter, row, showAdapter }: { adapter: string; row: H
       <TableCell><ManagedAccountState row={row} /></TableCell>
       <TableCell className="max-md:hidden"><span className="text-muted-foreground">—</span></TableCell>
       <TableCell className="text-right">
-        <span className="inline-flex flex-wrap items-center justify-end gap-1.5"><ManagedAccountControls row={row} /></span>
+        <span className="inline-flex flex-wrap items-center justify-end gap-2"><ManagedAccountControls row={row} /></span>
       </TableCell>
     </TableRow>
   )
 }
 
-/** Logins waiting for someone, each linking to its account's 接入 tab (where it is completed). */
+/**
+ * Logins waiting for someone (the Accounts design's hero-2 card): the first one with its one primary
+ * action, the others as rows; each links to its account's 接入 tab (where it is completed).
+ */
 function WaitingLoginSection({ tasks }: { tasks: EndpointsAndLogin['tasks'] }) {
   const i18n = useI18n()
   const typeLabel = useLoginTaskTypeLabel()
   if (!tasks.length) return null
+  const [first, ...rest] = tasks
   return (
-    <ObjectSection title={i18n.t('等待登录')} description={i18n.t('这些账号需要扫码或验证后才能上线。在账号的「接入」页签完成。')}>
-      <Card className="overflow-hidden p-0">
+    <HeroCard variant="hero-2" className="console-scope-login-hero" aria-label={i18n.t('等待登录')}>
+      <div className="console-scope-login-hero-main">
+        <Tile tone={1} size="lg"><KeyRound /></Tile>
+        <div className="console-scope-login-hero-copy">
+          <StatusDot tone="progress">{i18n.t('待登录')}</StatusDot>
+          <h2 className="console-hero-title">{i18n.t('{0} 需要{1}', [first.endpointKey, typeLabel(first.type)])}</h2>
+          <span className="console-scope-login-hero-sub"><code>{first.adapter}</code>{rest.length ? ` · ${i18n.t('还有 {0} 个', [rest.length])}` : ''}</span>
+        </div>
+        <Button asChild variant="primary"><Link to={endpointHref(first.adapter, first.endpointKey, 'access')}>{i18n.t('去登录')}</Link></Button>
+      </div>
+      {rest.length ? (
         <ul className="console-scope-task-list">
-          {tasks.map(task => (
+          {rest.map(task => (
             <li key={task.id}>
               <Link to={endpointHref(task.adapter, task.endpointKey, 'access')} className="console-scope-task">
                 <WaitingLoginBadge />
@@ -201,8 +214,8 @@ function WaitingLoginSection({ tasks }: { tasks: EndpointsAndLogin['tasks'] }) {
             </li>
           ))}
         </ul>
-      </Card>
-    </ObjectSection>
+      ) : null}
+    </HeroCard>
   )
 }
 
@@ -220,7 +233,7 @@ export function GlobalOverview() {
   const [query, setQuery] = useState('')
   const counts = accountCounts(data.endpoints, data.tasks)
   const accounts = filterAccounts(data.endpoints, { filter, query, tasks: data.tasks })
-  const refresh = <Button variant="outline" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
+  const refresh = <Button variant="secondary" size="sm" onClick={data.refresh} disabled={data.loading}><RefreshCw className={data.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>
   if (data.error && !data.loaded) return <StatusState error={data.error} onRetry={data.refresh} />
   return (
     <>
@@ -235,6 +248,26 @@ export function GlobalOverview() {
       ) : <Skeleton className="h-20" />}
       {data.error ? <StatusState compact error={data.error} onRetry={data.refresh} description={i18n.t('刷新失败，下面是上一次读取的内容。')} /> : null}
       <WaitingLoginSection tasks={data.tasks} />
+      {data.loaded && data.endpoints.length ? (
+        <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。')}>
+          {data.endpoints.length > 3 ? (
+            <div className="console-scope-toolbar">
+              <Segmented role="radiogroup" aria-label={i18n.t('账号状态')} value={filter} onValueChange={value => setFilter(value)} className="console-scope-filter"
+                options={ACCOUNT_FILTERS.map(id => ({ value: id, label: <>{i18n.t(ACCOUNT_FILTER_LABELS[id])} <span className="console-feature-filter-count">{counts[id]}</span></> }))} />
+              <label className="console-feature-search">
+                <Search aria-hidden="true" />
+                <Input className="h-8" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={i18n.t('搜索账号…')} aria-label={i18n.t('搜索账号…')} />
+              </label>
+            </div>
+          ) : null}
+          <Card className="overflow-hidden p-0">
+            {accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter label={i18n.t('聊天账号')} /> : (
+              <StatusState kind="empty" compact className="m-3" title={i18n.t('没有符合筛选条件的聊天账号')}
+                actions={<Button size="sm" variant="secondary" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
+            )}
+          </Card>
+        </ObjectSection>
+      ) : null}
       <ObjectSection title={i18n.t('适配器')} description={i18n.t('每个适配器一页：账号、连接管理与功能覆盖。')} actions={refresh}>
         <Card className="overflow-hidden p-0">
           {!data.loaded ? <TableSkeleton /> : !adapters.length ? (
@@ -258,7 +291,7 @@ export function GlobalOverview() {
                       {platformLabel(item.adapter) !== item.adapter ? <span className="console-scope-row-sub">{i18n.t(platformLabel(item.adapter))}</span> : null}
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex flex-wrap items-center gap-2">
                         <Badge variant={item.online < item.accounts ? 'warning' : 'outline'} size="sm" className="whitespace-nowrap">{i18n.t('{0} / {1} 在线', [item.online, item.accounts])}</Badge>
                         {item.waitingLogin ? <WaitingLoginBadge /> : null}
                         {item.configuredOnly.length ? <span className="text-xs text-muted-foreground max-md:hidden">{i18n.t('另有 {0} 个未运行', [item.configuredOnly.length])}</span> : null}
@@ -275,31 +308,6 @@ export function GlobalOverview() {
           )}
         </Card>
       </ObjectSection>
-      {data.loaded && data.endpoints.length ? (
-        <ObjectSection title={i18n.t('聊天账号')} description={i18n.t('点账号进入它的页面：会话、聊天、接入、功能与角色。')}>
-          {data.endpoints.length > 3 ? (
-            <div className="console-scope-toolbar">
-              <div className="console-feature-filters" role="group" aria-label={i18n.t('账号状态')}>
-                {ACCOUNT_FILTERS.map(id => (
-                  <button key={id} type="button" aria-pressed={filter === id} onClick={() => setFilter(id)} className={cn('console-feature-filter', filter === id && 'is-active')}>
-                    {i18n.t(ACCOUNT_FILTER_LABELS[id])}<span className="console-feature-filter-count">{counts[id]}</span>
-                  </button>
-                ))}
-              </div>
-              <label className="console-feature-search">
-                <Search aria-hidden="true" />
-                <Input className="h-8" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder={i18n.t('搜索账号…')} aria-label={i18n.t('搜索账号…')} />
-              </label>
-            </div>
-          ) : null}
-          <Card className="overflow-hidden p-0">
-            {accounts.length ? <AccountTable endpoints={accounts} tasks={data.tasks} showAdapter label={i18n.t('聊天账号')} /> : (
-              <StatusState kind="empty" compact className="m-3" title={i18n.t('没有符合筛选条件的聊天账号')}
-                actions={<Button size="sm" variant="outline" onClick={() => { setFilter('all'); setQuery('') }}>{i18n.t('清除筛选')}</Button>} />
-            )}
-          </Card>
-        </ObjectSection>
-      ) : null}
       {data.loaded ? <OnboardingSection first={!data.endpoints.length} /> : null}
     </>
   )
@@ -410,7 +418,7 @@ export function EndpointOverview({ scope, endpointInfo, unlisted = false, onOpen
       {unlisted ? (
         <StatusState compact kind="empty" title={i18n.t('账号 {0} 当前没有运行', [endpoint])}
           description={i18n.t('Host 的运行列表里没有这个账号，所以没有在线状态可读。在「接入」页签查看它的配置，或把它导入账号管理。')}
-          actions={<Button size="sm" variant="outline" onClick={() => onOpenTab('access')}>{i18n.t('打开「接入」')}</Button>} />
+          actions={<Button size="sm" variant="secondary" onClick={() => onOpenTab('access')}>{i18n.t('打开「接入」')}</Button>} />
       ) : loaded && error && !info ? (
         <StatusState compact error={error} description={i18n.t('读取账号状态失败。会话与其他页签仍可使用。')} />
       ) : info ? (
@@ -426,12 +434,12 @@ export function EndpointOverview({ scope, endpointInfo, unlisted = false, onOpen
       ) : !loaded ? <Skeleton className="h-20" /> : null}
       {info && !info.connected ? (
         <StatusState kind="disconnected" compact title={i18n.t('账号未连接')} description={i18n.t('在「接入」页签完成登录或测试连接。')}
-          actions={<Button size="sm" variant="outline" onClick={() => onOpenTab('access')}><KeyRound />{i18n.t('打开接入')}</Button>} />
+          actions={<Button size="sm" variant="secondary" onClick={() => onOpenTab('access')}><KeyRound />{i18n.t('打开接入')}</Button>} />
       ) : null}
       <ObjectSection title={i18n.t('会话')}
         description={i18n.t('有覆盖的会话与最近活跃的会话。全部会话在「聊天」页签里。')}
         // A real link to the account chat's list pane (?tab=chat, no conversation): back returns here.
-        actions={<Button asChild variant="outline" size="sm"><Link to={scopeHref(scope, 'chat')}><MessagesSquare />{i18n.t('全部会话')}</Link></Button>}>
+        actions={<Button asChild variant="secondary" size="sm"><Link to={scopeHref(scope, 'chat')}><MessagesSquare />{i18n.t('全部会话')}</Link></Button>}>
         {conversations.status === 'unsupported' || conversations.status === 'forbidden' ? (
           <StatusState kind={conversations.status} compact permissions={conversations.status === 'forbidden' ? ['feature.view'] : undefined}
             description={conversations.status === 'unsupported' ? i18n.t('会话摘要需要新版 Host。会话仍可在「聊天」页签中查看。') : undefined} />
@@ -483,7 +491,7 @@ export function ConversationOverview({ scope, item, levelMissing }: { scope: Sco
           description={levelMissing === 'unsupported' ? i18n.t('按会话配置功能需要新版 Host。当前会话使用账号的配置。') : undefined} />
       ) : (
         <ObjectSection title={i18n.t('这个会话的覆盖')} description={i18n.t('在这个会话里单独改过的功能。修改在「功能」页签。')}
-          actions={<Button asChild variant="outline" size="sm"><Link to={scopeHref(scope, 'features')}><SlidersHorizontal />{i18n.t('功能设置')}</Link></Button>}>
+          actions={<Button asChild variant="secondary" size="sm"><Link to={scopeHref(scope, 'features')}><SlidersHorizontal />{i18n.t('功能设置')}</Link></Button>}>
           {item?.overrides?.length ? (
             <Card className="overflow-hidden p-0">
               <ul className="console-scope-task-list">
@@ -505,7 +513,7 @@ export function ConversationOverview({ scope, item, levelMissing }: { scope: Sco
             </Card>
           ) : (
             <StatusState kind="empty" compact title={i18n.t('没有覆盖')} description={i18n.t('这个会话沿用账号、适配器与全局的功能设置。')}
-              actions={<Button asChild size="sm" variant="outline"><Link to={scopeHref(scope, 'features')}><Plus />{i18n.t('设置功能')}</Link></Button>} />
+              actions={<Button asChild size="sm" variant="secondary"><Link to={scopeHref(scope, 'features')}><Plus />{i18n.t('设置功能')}</Link></Button>} />
           )}
         </ObjectSection>
       )}

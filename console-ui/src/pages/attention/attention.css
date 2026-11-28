@@ -192,20 +192,22 @@
   .console-attention-list.is-summary .console-attention-row-actions { flex-wrap: nowrap; align-self: start; }
 
   /* ---------- Top bar badge ---------- */
+  /* Top-bar bell: a round white icon button (library IconButton look), the count on its corner. */
   .console-attention-badge {
     position: relative;
-    display: inline-flex;
-    width: var(--console-control-height);
-    height: var(--console-control-height);
+    display: inline-grid;
+    width: var(--console-size-icon-button);
+    height: var(--console-size-icon-button);
     flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
+    place-items: center;
     border-radius: var(--console-radius-full);
-    color: hsl(var(--foreground));
+    background: hsl(var(--console-surface));
+    color: hsl(var(--console-ink));
+    box-shadow: var(--console-elevation-1);
   }
-
-  .console-attention-badge:hover { background: var(--console-surface-hover); }
-  .console-attention-badge:focus-visible { outline: var(--console-border-focus) solid hsl(var(--ring)); outline-offset: 1px; }
+  .console-attention-badge > svg { width: var(--console-size-icon); height: var(--console-size-icon); }
+  .console-attention-badge:hover { background-image: linear-gradient(hsl(var(--console-ink) / 0.04), hsl(var(--console-ink) / 0.04)); }
+  .console-attention-badge:focus-visible { outline: var(--console-focus-ring); outline-offset: var(--console-focus-ring-offset); }
 
   .console-attention-badge-count {
     position: absolute;
@@ -236,6 +238,5 @@
     /* Dashboard rows: 详情 and the action share one line under the sentence. */
     .console-attention-list.is-summary .console-attention-row-actions > :first-child { grid-column: auto; }
     .console-attention-list.is-summary .console-attention-row-actions > :last-child:nth-child(2) { grid-column: auto; }
-    .console-attention-badge { width: 2.75rem; height: 2.75rem; }
   }
 }

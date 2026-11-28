@@ -28,7 +28,7 @@ function CellBadge({ cell, to }: { cell: FeatureCell | undefined; to?: string })
     : state === 'enabled' ? <Badge variant="outline">{i18n.t("启用")}</Badge>
       : state === 'disabled' ? <Badge variant="outline">{i18n.t("禁用")}</Badge>
         : <span className="text-muted-foreground">—</span>
-  const content = <span className="inline-flex items-center gap-1.5">{badge}{cell?.overridden ? <Badge variant="info" size="sm">{i18n.t("有覆盖")}</Badge> : null}</span>
+  const content = <span className="inline-flex items-center gap-2">{badge}{cell?.overridden ? <Badge variant="info" size="sm">{i18n.t("有覆盖")}</Badge> : null}</span>
   return to ? <Link to={to} className="inline-flex rounded-md focus-visible:outline-2">{content}</Link> : content
 }
 
@@ -135,7 +135,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
   const toggleGlobal = (row: FeatureMatrixRow, enabled: boolean) => {
     globalSwitch.prepare({ plugin: row.plugin, name: row.name, current: row.global.enabled === true, enabled, revision })
   }
-  const refreshButton = <Button variant="outline" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
+  const refreshButton = <Button variant="secondary" size="sm" onClick={refresh} disabled={loading}><RefreshCw className={loading ? 'animate-spin' : ''} />{i18n.t("刷新")}</Button>
   const frame = (children: ReactNode) => embedded
     ? <ObjectSection title={heading?.title ?? i18n.t("功能矩阵")} description={heading?.description} actions={<>{heading?.actions}{refreshButton}</>}>{children}</ObjectSection>
     : <PageShell>{children}</PageShell>
@@ -171,7 +171,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2, 3].map(index => <Skeleton key={index} className="h-9" />)}</div>} />
         ) : !rows.length && !root ? (
           <StatusState kind="empty" className="m-3" title={i18n.t("还没有功能")} description={i18n.t("安装插件后，它们的功能会出现在这里。")}
-            actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
+            actions={<Button asChild size="sm" variant="secondary"><Link to="/marketplace">{i18n.t("去插件市场")}</Link></Button>} />
         ) : (
           // #64 feature-matrix-mobile-headers: under 40rem the shared Table turns rows into cards and hides
           // its header (with the adapter and override links); the same container query shows them here instead.

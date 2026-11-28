@@ -127,7 +127,7 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
     <div ref={sectionRef} className={highlight ? 'console-chat-me is-highlighted' : 'console-chat-me'}>
       <ObjectSection title={i18n.t('我的聊天身份')}
         description={i18n.t('链接到你 Console 账号的「人」：它在各平台的身份与聊天角色。链接不带来任何权限，只用于 Sandbox「以我的聊天身份发言」、个人推理主体与显示授予者。')}
-        actions={<Button variant="outline" size="sm" onClick={refresh} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
+        actions={<Button variant="secondary" size="sm" onClick={refresh} disabled={state.status === 'loading'}><RefreshCw className={state.status === 'loading' ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button>}>
         {state.status === 'forbidden' ? <StatusState kind="forbidden" permissions={[CHAT_IDENTITY_SELF_PERMISSION]} />
           : state.status === 'failed' ? <StatusState error={state.error} onRetry={refresh} />
           : state.status === 'loading' ? <StatusState kind="loading" />
@@ -169,11 +169,11 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
                   <div className="console-chat-bind-code" aria-live="polite">
                     <span className="console-admin-note">{i18n.t('在私聊里给机器人发送：')}</span>
                     <code className="console-chat-bind-instruction">{instruction}</code>
-                    <Button variant="outline" size="sm" onClick={() => { void copyText(instruction, navigator.clipboard, document).then(ok => setNotice(ok ? i18n.t('已复制') : null)) }}><Copy />{i18n.t('复制')}</Button>
+                    <Button variant="secondary" size="sm" onClick={() => { void copyText(instruction, navigator.clipboard, document).then(ok => setNotice(ok ? i18n.t('已复制') : null)) }}><Copy />{i18n.t('复制')}</Button>
                     <span className="console-chat-bind-countdown">{i18n.t('剩余 {0}', [bindCountdown(code.expiresAt, now)])}</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => { void createCode() }} disabled={busy}>
+                  <Button variant="secondary" size="sm" onClick={() => { void createCode() }} disabled={busy}>
                     <KeyRound />{me?.pendingCodeExpiresAt ? i18n.t('重新生成绑定码') : i18n.t('生成绑定码')}
                   </Button>
                 )}
@@ -191,7 +191,7 @@ export function MyChatIdentitySection({ highlight = false }: { highlight?: boole
               <DialogDescription>{i18n.t('全局 owner 在每个平台的聊天里都是机器人的主人：可以改配置、重启、使用危险工具。这条授予会写入审计日志（chat-roles.grant）。')}</DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setConfirmOwner(false)} disabled={busy}>{i18n.t('取消')}</Button>
+              <Button variant="secondary" onClick={() => setConfirmOwner(false)} disabled={busy}>{i18n.t('取消')}</Button>
               <Button onClick={() => { void promote() }} disabled={busy}>{i18n.t('设为全局 owner')}</Button>
             </DialogFooter>
           </DialogContent>

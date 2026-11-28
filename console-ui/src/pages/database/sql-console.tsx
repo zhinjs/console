@@ -124,7 +124,7 @@ export function SqlConsole({ admin, supported, reason, needsRole, dialect, diale
           {history.length ? <ul className="divide-y">
             {history.map(entry => (
               <li key={`${entry.at}-${entry.sql}`}>
-                <button type="button" className="w-full px-3 py-1.5 text-left font-mono text-xs hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                <button type="button" className="w-full px-3 py-2 text-left font-mono text-xs hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   onClick={() => { setSql(entry.sql); setShowHistory(false); editor.current?.focus() }}>
                   <span className={entry.ok ? 'text-foreground' : 'text-destructive'}>{entry.sql.length > 160 ? `${entry.sql.slice(0, 160)}…` : entry.sql}</span>
                   <span className="ml-2 text-muted-foreground">{new Date(entry.at).toLocaleString(i18n.locale)}</span>
@@ -132,7 +132,7 @@ export function SqlConsole({ admin, supported, reason, needsRole, dialect, diale
               </li>
             ))}
           </ul> : <p className="p-3 text-xs text-muted-foreground">{i18n.t('还没有执行过语句。历史只保存在这个浏览器里。')}</p>}
-          {history.length ? <div className="border-t p-1.5 text-right">
+          {history.length ? <div className="border-t p-2 text-right">
             <Button type="button" size="sm" variant="ghost" onClick={() => setHistory(clearSqlHistory(storage))}><Trash2 className="w-3.5 h-3.5 mr-1" />{i18n.t('清空历史')}</Button>
           </div> : null}
         </div>
@@ -196,7 +196,7 @@ export function SqlConsole({ admin, supported, reason, needsRole, dialect, diale
                         const key = `${rowIndex}:${column}`
                         const masked = isSensitiveColumn(column) && row[column] != null && !revealed.has(key)
                         return (
-                          <TableCell key={column} className="whitespace-nowrap py-1.5 font-mono text-xs">
+                          <TableCell key={column} className="whitespace-nowrap py-2 font-mono text-xs">
                             {isSensitiveColumn(column) && row[column] != null ? (
                               <button type="button" className="inline-flex items-center gap-1 rounded-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 aria-label={masked ? i18n.t('显示 {0} 的值', [column]) : i18n.t('隐藏 {0} 的值', [column])}

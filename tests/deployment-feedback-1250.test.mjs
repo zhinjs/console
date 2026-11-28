@@ -17,7 +17,8 @@ import { SCOPE_TAB_LABELS } from '../console-ui/src/scope/scope-tree.mjs'
 const src = path => readFileSync(new URL(`../console-ui/src/${path}`, import.meta.url), 'utf8')
 
 test('content width: one column token; only split-pane workspaces opt out, never with their own caps', () => {
-  assert.match(src('design-system.css'), /--console-content-max: 90rem;/)
+  // The column is the library's `data` width (80rem = 1280px, console-ui 1.3.0); the Console does not redefine it.
+  assert.doesNotMatch(src('design-system.css'), /--console-content-max:/)
   assert.match(src('design-system.css'), /\.console-content-frame \{\s*max-width: var\(--console-content-max\);/)
   const shell = src('registerBuiltinShell.tsx')
   const wide = shell.split('app.addRoute(').filter(block => /fullWidth: true/.test(block)).map(block => /path: P\.(\w+)/.exec(block)[1]).sort()
@@ -109,7 +110,8 @@ test('purpose pickers: profiles grouped by service, Agent-only profiles in their
 test('navigation and role names: 核心 / 插件页面 in the 功能 menu; Console 角色 and 聊天角色 are told apart', () => {
   const layout = src('layouts/dashboard.tsx')
   assert.match(layout, /section\.groups\.map/)
-  assert.match(layout, /DropdownMenuLabel className="console-topnav-menu-label"/)
+  // 功能's Chips are grouped (核心 / 插件页面) with a visible label for the plugin-page group.
+  assert.match(layout, /className="console-section-nav-label"/)
   assert.match(src('bootstrap/loadConsoleEntries.ts'), /route\.element\.type === AdapterConsolePage/)
   assert.match(src('registerBuiltinShell.tsx'), /name: 'Console 角色'/)
   assert.match(src('i18n/navigation.ts'), /"\/access\/roles": "Console 角色"/)

@@ -40,7 +40,7 @@ export function ConversationTargetEditor({ value, onChange, allowedKinds = CONVE
     } catch (error) { if (request.current()) setCatalog({scope: request.scope, rows: [], error: error instanceof Error ? error.message : i18n.t("账号列表读取失败")}) }
   }
   return <div className="min-w-0 space-y-3">
-    <div className="flex flex-wrap items-center gap-2"><Button type="button" variant="outline" size="sm" disabled={disabled || active && catalog.loading} onClick={() => void loadEndpoints()}>{active && catalog.loading ? i18n.t("正在读取账号…") : i18n.t("读取当前 Host 账号")}</Button><span className="text-xs text-muted-foreground">{i18n.t("仅读取列表，不验证平台或发送消息。")}</span></div>
+    <div className="flex flex-wrap items-center gap-2"><Button type="button" variant="secondary" size="sm" disabled={disabled || active && catalog.loading} onClick={() => void loadEndpoints()}>{active && catalog.loading ? i18n.t("正在读取账号…") : i18n.t("读取当前 Host 账号")}</Button><span className="text-xs text-muted-foreground">{i18n.t("仅读取列表，不验证平台或发送消息。")}</span></div>
     {active && catalog.error ? <p role="alert" className="break-words text-xs text-destructive">{catalog.error}</p> : null}
     <label className="block text-sm" htmlFor={`${prefix}-endpoint`}>{i18n.t("目标账号")}<SelectField id={`${prefix}-endpoint`} className={control} disabled={disabled} value={selected} onValueChange={selectedEndpoint => {
       const endpoint = endpoints.find(row => endpointKey(row.endpoint) === selectedEndpoint)?.endpoint

@@ -25,7 +25,7 @@ import { registerBuiltinConsolePages } from "@console/registerBuiltinShell";
 import { initializeTheme } from "@console/theme";
 import LoginPage from "@console/pages/login";
 import * as ConsoleUi from "@zhin.js/console-ui";
-import { TooltipProvider } from "@zhin.js/console-ui";
+import { Toaster, TooltipProvider } from "@zhin.js/console-ui";
 import { ConsoleSessionGate } from "@console/components/console-session-gate";
 import { ToastProvider, useToast } from "@console/components/toast";
 import { runQueryPrefillMiddleware, takeLoginLink, type InitialSession } from "./middleware/queryPrefill";
@@ -131,9 +131,14 @@ ReactDOMClient.createRoot(document.getElementById("root")!).render(
     <LocaleProvider>
       <ConsoleUiLocale>
         <TooltipProvider>
-          <ToastProvider>
-            <RouterProvider router={router} />
-          </ToastProvider>
+          {/* The library's Toaster (console-ui 1.3.0): `useToast()` from @zhin.js/console-ui shows its
+              one-line toasts here, for plugin pages and the shell alike. The Console's own titled
+              notices (errors stay until dismissed) keep their ToastProvider. */}
+          <Toaster>
+            <ToastProvider>
+              <RouterProvider router={router} />
+            </ToastProvider>
+          </Toaster>
         </TooltipProvider>
       </ConsoleUiLocale>
     </LocaleProvider>

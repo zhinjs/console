@@ -60,9 +60,14 @@ export function loginTasksFor(tasks = [], adapter, endpoint) {
 export const ACCOUNT_FILTERS = Object.freeze(['all', 'online', 'waiting', 'offline'])
 export const ACCOUNT_FILTER_LABELS = Object.freeze({ all: '全部', online: '在线', waiting: '等待登录', offline: '离线' })
 
-function waitingLogin(endpoint, tasks) {
+/**
+ * Whether an account waits for a login (「待登录」): the row says so (`pendingLogin`, or an
+ * unfinished `loginStep`, ADR 0058) or LoginAssist (`login.list`) holds a task for it.
+ */
+export function waitingLogin(endpoint, tasks = []) {
+  if (!endpoint) return false
   // `loginStep` (ADR 0058): the Host reports an unfinished login flow on the row itself.
-  return endpoint.pendingLogin === true || (endpoint.loginStep != null && typeof endpoint.loginStep === 'object') || tasks.some(task => task.adapter === endpoint.adapter && task.endpointKey === endpoint.name)
+  return endpoint.pendingLogin === true || (endpoint.loginStep != null && typeof endpoint.loginStep === 'object') || (tasks ?? []).some(task => task?.adapter === endpoint.adapter && task?.endpointKey === endpoint.name)
 }
 
 /** Status of one account row: online / waiting (login task open) / offline. */

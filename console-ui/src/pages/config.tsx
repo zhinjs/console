@@ -134,7 +134,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
           <AlertDescription className="space-y-2">
             <p>{readErrorSummary(error, i18n.t("配置"), i18n.locale)}</p>
             <details><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><pre className="mt-2 whitespace-pre-wrap break-words text-xs">{error}</pre></details>
-            <Button variant="outline" size="sm" onClick={() => void load().catch(() => {})}>{i18n.t("重试读取")}</Button>
+            <Button variant="secondary" size="sm" onClick={() => void load().catch(() => {})}>{i18n.t("重试读取")}</Button>
           </AlertDescription>
         </Alert>
       )}
@@ -166,7 +166,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
                 : unresolved.kind === 'unknown-plugin'
                   ? i18n.t("当前 Host 没有名为「{0}」的插件配置，已显示{1}。", [unresolved.value, i18n.t(activeGroup.title)])
                   : i18n.t("链接中的设置位置「{0}」不存在，已显示{1}。", [unresolved.value, i18n.t(activeGroup.title)])}</p>
-              {unresolved.kind !== 'unknown-section' ? <Button asChild variant="outline" size="sm">
+              {unresolved.kind !== 'unknown-section' ? <Button asChild variant="secondary" size="sm">
                 <Link to={`/plugins/${encodeURIComponent(unresolved.value)}`}>{i18n.t("查看插件详情")}</Link>
               </Button> : null}
             </AlertDescription>
@@ -214,7 +214,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
             {(normalizedFilter ? !searchResults.length : !listEntries.length) ? <div className="console-settings-empty" role="status">
               <Settings aria-hidden="true" /><h3>{i18n.t(normalizedFilter ? '没有匹配的设置' : '当前没有可配置项目')}</h3>
               {normalizedFilter ? <p>{i18n.t("换一个名称或用途重新搜索。")}</p> : null}
-              {normalizedFilter ? <Button variant="outline" onClick={() => setSectionFilter('')}>{i18n.t("清除搜索")}</Button> : null}
+              {normalizedFilter ? <Button variant="secondary" onClick={() => setSectionFilter('')}>{i18n.t("清除搜索")}</Button> : null}
             </div> : null}
           </section> : null}
 
@@ -233,7 +233,7 @@ function EditableConfigSession({ connectionScope }: { connectionScope: string })
               {entry && !entry.writable ? <Card className="console-settings-empty">
                 <Settings aria-hidden="true" /><h3>{i18n.t(entry.title)}</h3>
                 <p>{i18n.t("此项暂不支持表单编辑。")}</p>
-                <Button asChild variant="outline"><Link to="/ops/files">{i18n.t("打开文件管理")}</Link></Button>
+                <Button asChild variant="secondary"><Link to="/ops/files">{i18n.t("打开文件管理")}</Link></Button>
               </Card> : entry ? <PluginConfigForm pluginName={key} sourceRevision={snapshot?.revision}
                 displayTitle={i18n.t(entry.title)}
                 fieldNames={entry.fieldNames} excludedFieldNames={entry.excludedFieldNames ?? []}

@@ -162,7 +162,7 @@ export function DocumentCollectionView({
       {(write.held || write.result) && !editorOpen ? <WriteCheckNotice controller={write} className="shrink-0" onCheck={() => { void checkWrite() }} /> : null}
 
       <div className="flex flex-wrap items-center gap-2 shrink-0">
-        <Button size="sm" variant="outline" onClick={load} disabled={loading || busy}>
+        <Button size="sm" variant="secondary" onClick={load} disabled={loading || busy}>
           <RefreshCw className={`w-3.5 h-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />{i18n.t("刷新")}</Button>
         {!readOnly && <Button size="sm" disabled={busy || write.held} onClick={() => { setAddDoc(true); setJsonText('{\n  \n}') }}>
           <Plus className="w-3.5 h-3.5 mr-1" />{i18n.t("添加文档")}</Button>}
@@ -179,7 +179,7 @@ export function DocumentCollectionView({
             onChange={(event: ChangeEvent<HTMLInputElement>) => { const value = event.target.value; setFilterDraft(prev => ({ ...prev, value })); setFilterError(null) }} />
           {filterError ? <p role="alert" className="text-xs text-destructive">{filterError}</p> : null}
         </div>
-        <Button type="submit" size="sm" variant="outline" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
+        <Button type="submit" size="sm" variant="secondary" disabled={loading || busy}><Search className="w-3.5 h-3.5 mr-1" />{i18n.t("查找")}</Button>
       </form>
       {applied ? <p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground shrink-0" data-filter-summary>
         <span>{i18n.t("全表查找：{0} {1} “{2}”", [applied.field, i18n.t("等于"), applied.value])}</span>
@@ -200,7 +200,7 @@ export function DocumentCollectionView({
                   <RecordValueDisclosure value={doc} summary={valuePreview(doc, 140, ['_id'], i18n.locale)} label={i18n.t("查看完整 JSON")} />
                 </div>
                 {!readOnly && <div className="flex items-start gap-1 shrink-0">
-                  <Button size="sm" variant="outline" disabled={busy || write.held} aria-label={i18n.t("编辑记录")} onClick={() => {
+                  <Button size="sm" variant="secondary" disabled={busy || write.held} aria-label={i18n.t("编辑记录")} onClick={() => {
                     setEditDoc(doc)
                     setAddDoc(false)
                     setJsonText(JSON.stringify(doc, null, 2))
@@ -215,9 +215,9 @@ export function DocumentCollectionView({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" aria-label={i18n.t("上一页")} disabled={busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+          <Button size="sm" variant="secondary" aria-label={i18n.t("上一页")} disabled={busy || page <= 1} onClick={() => setPage((p: number) => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
           <span className="text-xs text-muted-foreground">{page} / {totalPages}</span>
-          <Button size="sm" variant="outline" aria-label={i18n.t("下一页")} disabled={busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+          <Button size="sm" variant="secondary" aria-label={i18n.t("下一页")} disabled={busy || page >= totalPages} onClick={() => setPage((p: number) => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
         </div>
       )}
 
@@ -234,7 +234,7 @@ export function DocumentCollectionView({
           {write.held || write.result ? <WriteCheckNotice controller={write} onCheck={() => { void checkWrite() }} /> : null}
           {msg?.type === 'error' && <div role="alert" className="space-y-2 text-sm text-destructive"><p>{msg.text}</p>{msg.details ? <details className="text-xs"><summary className="cursor-pointer">{i18n.t("技术详情")}</summary><p className="mt-2 whitespace-pre-wrap break-words">{msg.details}</p></details> : null}</div>}
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
+            <DialogClose asChild><Button variant="secondary" size="sm" disabled={busy || write.locked}>{i18n.t("取消")}</Button></DialogClose>
             <Button size="sm" disabled={busy || write.held} onClick={() => handleSave(addDoc)}><Save className="w-3.5 h-3.5 mr-1" />{i18n.t("保存")}</Button>
           </DialogFooter>
         </DialogContent>

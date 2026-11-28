@@ -68,7 +68,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
     <ObjectSection
       title={i18n.t('全部功能')}
       description={matrix.loading && !rows.length ? undefined : i18n.t('{0} 个功能，{1} 个已启用，{2} 个在下级另有设置。点功能名打开它的全局配置。', [counts.total, counts.enabled, counts.customized])}
-      actions={<>{switcher}<Button variant="outline" size="sm" onClick={() => { matrix.refresh(); list.refresh() }} disabled={matrix.loading}><RefreshCw className={matrix.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button></>}
+      actions={<>{switcher}<Button variant="secondary" size="sm" onClick={() => { matrix.refresh(); list.refresh() }} disabled={matrix.loading}><RefreshCw className={matrix.loading ? 'animate-spin' : ''} />{i18n.t('刷新')}</Button></>}
     >
       {matrix.source !== 'rpc' && matrix.source !== 'loading' && !matrix.error ? (
         <Alert role="status"><AlertDescription>
@@ -85,7 +85,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
           <StatusState kind="loading" className="m-4" placeholder={<div className="space-y-2 p-4">{[0, 1, 2].map(index => <Skeleton key={index} className="h-10" />)}</div>} />
         ) : !rows.length ? (
           <StatusState kind="empty" compact className="m-3" title={i18n.t('还没有功能')} description={i18n.t('安装插件后，它们的功能会出现在这里。')}
-            actions={<Button asChild size="sm" variant="outline"><Link to="/marketplace">{i18n.t('去插件市场')}</Link></Button>} />
+            actions={<Button asChild size="sm" variant="secondary"><Link to="/marketplace">{i18n.t('去插件市场')}</Link></Button>} />
         ) : (
           <Table aria-label={i18n.t('全部功能')}>
             <TableHeader>
@@ -102,9 +102,9 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
                   <TableCell className="max-w-[18rem]">
                     <Link to={featureGlobalHref(row.plugin)} className="font-medium hover:underline">{row.name}</Link>
                     {row.name !== row.plugin ? <code className="ml-2 text-xs text-muted-foreground">{row.plugin}</code> : null}
-                    {row.description && row.description !== row.name ? <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
+                    {row.description && row.description !== row.name ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{row.description}</p> : null}
                     {levelSupport && (row.below.length || row.conversations.length) ? (
-                      <p className="mt-0.5 text-xs text-muted-foreground md:hidden">{i18n.t('{0} 处下级另有设置', [row.below.length + row.conversations.length])}</p>
+                      <p className="mt-1 text-xs text-muted-foreground md:hidden">{i18n.t('{0} 处下级另有设置', [row.below.length + row.conversations.length])}</p>
                     ) : null}
                   </TableCell>
                   <TableCell>

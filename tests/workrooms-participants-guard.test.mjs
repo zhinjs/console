@@ -6,6 +6,8 @@ import * as jsxRuntime from 'react/jsx-runtime'
 import { pageRuntime, nodes } from './helpers/inference-page-runtime.mjs'
 import { translate } from '../console-ui/src/i18n/locale.mjs'
 import * as model from '../console-ui/src/pages/engagements-model.mjs'
+import * as featureDisabled from '../console-ui/src/utils/feature-disabled.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 
 // What the Host sent in the 2026-11-15 deployment: no `participants`, and a detail without `board` / `events`.
 const SUMMARY = { engagementId: 'e1', status: 'completed', startedAt: 1_794_000_000_000, venue: 'room', hops: 2, turns: 3, tokensUsed: 1840 }
@@ -31,7 +33,7 @@ async function renderWorkrooms({ engagements, detail }) {
     '../hooks/visible-polling.mjs': { startVisiblePolling: () => () => {} },
     '@zhin.js/console-ui': { cn: (...parts) => parts.filter(Boolean).join(' '), PageHeader: 'header', PageShell: 'main', EmptyState: 'empty', Badge: 'badge', Button: 'button', Card: 'card', CardContent: 'card-content', Skeleton: 'skeleton', ListItemButton: 'button', Sheet: 'sheet', SheetContent: 'sheet-content', SheetDescription: 'p', SheetHeader: 'div', SheetTitle: 'h2' }, '../components/StatusState': { StatusState: 'status' },
     '../hooks/useIsMobile': { useIsMobile: () => false },
-    './engagements-model.mjs': model,
+    './engagements-model.mjs': model, '../utils/feature-disabled.mjs': featureDisabled, '../console-routes.mjs': consoleRoutes,
   }
   const module = { exports: {} }
   new Function('require', 'module', 'exports', code)(name => { assert.ok(name in deps, name); return deps[name] }, module, module.exports)

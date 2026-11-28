@@ -40,13 +40,12 @@ const successUses = text => SUCCESS_PATTERNS.reduce((count, pattern) => count + 
  * color is the content itself (ANSI, diff), or the token / variant definitions.
  */
 const SUCCESS_ALLOWED = {
-  'console-ui/src/theme-tokens.css': [1, '令牌定义（--status-success 别名）'],
-  'console-ui/src/design-system.css': [4, 'Badge success 变体的样式定义（3）；把组件库 MiniRingGauge 的 success 描边改成图表色的覆盖规则（1）'],
+  'console-ui/src/design-system.css': [1, '把组件库 MiniRingGauge 的 success 描边改成图表色的覆盖规则（Badge success 变体的覆盖已删除，用组件库自己的 ok 绿）'],
   'console-ui/src/components/ansi-text.css': [1, '日志里 ANSI 绿色（32 / 92）的原样还原，颜色就是内容'],
   'console-ui/src/utils/ansi-log.mjs': [2, 'ANSI 颜色码到 tone 的映射表，同上'],
   'console-ui/src/pages/HostSelfChangesPanel.tsx': [2, 'diff 新增行的语法着色，不是状态'],
   'console-ui/src/components/toast.tsx': [1, 'toast.success()：用户刚做完的操作的一次性反馈'],
-  'console-ui/src/components/toast.css': [2, 'success toast 的图标（一次性反馈）'],
+  'console-ui/src/components/toast.css': [1, 'success 通知的图标（一次性反馈）'],
   'console-ui/src/components/status-surfaces.css': [6, 'ActionReceipt / ApplyFeedback：保存、应用之后的一次性回执'],
   'console-ui/src/components/ApplyFeedback.tsx': [1, '重启后已生效的回执，同上'],
   'console-ui/src/components/apply-outcome-model.mjs': [1, '回执语气（applied → success），同上'],
@@ -181,7 +180,7 @@ test('received / sent stay apart from each other and from the warning color (ΔE
   const design = read('console-ui/src/design-system.css')
   const inbound = /--zc-chart-inbound: var\(--([\w-]+)\)/.exec(design)[1], outbound = /--zc-chart-outbound: var\(--([\w-]+)\)/.exec(design)[1]
   for (const [theme, dark] of [['light', false], ['dark', true]]) {
-    const values = tokenValues('zhin', dark)
+    const values = tokenValues(dark)
     const value = name => toLab(hslToRgb(...resolveToken(values, name).split(/\s+/).map(parseFloat)))
     const [a, b] = [value(inbound), value(outbound)]
     assert.ok(deltaE2000(a, b) >= 20, `${theme}: received / sent ΔE ${deltaE2000(a, b).toFixed(1)}`)

@@ -82,8 +82,8 @@ export function InstanceUnavailableBanner() {
         </p>
       </div>
       <div className="console-instance-banner-actions">
-        <Button size="sm" variant="outline" onClick={probe} disabled={probing}><RefreshCw className={probing ? 'animate-spin' : ''} />{i18n.t('立即重试')}</Button>
-        <Button asChild size="sm" variant="outline"><Link to="/ops/instance">{i18n.t('查看实例')}</Link></Button>
+        <Button size="sm" variant="secondary" onClick={probe} disabled={probing}><RefreshCw className={probing ? 'animate-spin' : ''} />{i18n.t('立即重试')}</Button>
+        <Button asChild size="sm" variant="secondary"><Link to="/ops/instance">{i18n.t('查看实例')}</Link></Button>
       </div>
     </div>
   )

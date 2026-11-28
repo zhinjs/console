@@ -122,3 +122,13 @@ a.console-scope-task:focus-visible { outline: var(--console-border-focus) solid 
 .console-account-switch:has(button:disabled) { cursor: not-allowed; }
 .console-account-notice { margin-bottom: var(--console-space-3); }
 .console-adapter-console [data-adapter-account-editor] { margin-bottom: var(--console-section-gap); }
+
+/* Waiting logins: the Accounts design's hero-2 card (first login with its one primary action, the rest as rows). */
+.console-scope-login-hero { display: flex; flex-direction: column; gap: var(--console-space-4); }
+.console-scope-login-hero-main { display: flex; flex-wrap: wrap; align-items: center; gap: var(--console-space-4-5); }
+.console-scope-login-hero-copy { display: flex; min-width: 0; flex: 1 1 18rem; flex-direction: column; gap: var(--console-space-1); }
+.console-scope-login-hero-copy .console-hero-title { margin: 0; overflow-wrap: anywhere; }
+.console-scope-login-hero-sub { color: hsl(var(--console-muted)); font-size: var(--console-text-sm); }
+.console-scope-login-hero .console-tile { background: var(--console-hero-overlay); }
+.console-scope-login-hero .console-scope-task-list { border-radius: var(--console-radius-4); background: var(--console-hero-overlay); }
+.console-scope-filter { max-width: 26rem; }

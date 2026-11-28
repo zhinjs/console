@@ -11,7 +11,7 @@ import { tabPanelProps, tabTriggerProps } from '../utils/tab-panel-link.mjs'
 import {
   Search, Package, Download, ExternalLink, RefreshCw, Copy, Check, Settings, CheckCircle2, ToggleLeft,
 } from 'lucide-react'
-import { Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
+import { Chip, Alert, AlertDescription, Badge, Button, Card, CardContent, Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, InlineCode, Input, PageHeader, PageShell, SelectField, Separator, Skeleton, Tabs, TabsList, TabsTrigger } from '@zhin.js/console-ui'
 import { StatusState } from '../components/StatusState'
 import { apiFetch } from '../utils/auth'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -329,8 +329,8 @@ function MarketplaceSession({ scope }: { scope?: string }) {
         title={i18n.t("插件市场")}
         description={i18n.t("探索 Zhin.js 生态中的插件。列表为发现索引，打开详情后核验注册表 latest；安装由管理网关作为依赖事务执行。")}
         actions={<>
-          <Button variant="outline" size="sm" asChild><Link to="/plugins"><Package />{i18n.t("插件")}</Link></Button>
-          <Button variant="outline" size="sm" onClick={() => checkUpdates()} disabled={updatesLoading} aria-busy={updatesLoading || undefined}>
+          <Button variant="secondary" size="sm" asChild><Link to="/plugins"><Package />{i18n.t("插件")}</Link></Button>
+          <Button variant="secondary" size="sm" onClick={() => checkUpdates()} disabled={updatesLoading} aria-busy={updatesLoading || undefined}>
             <RefreshCw className={updatesLoading ? 'animate-spin' : ''} />
             {updatesLoading ? i18n.t("检查中…") : i18n.t("检查更新")}</Button>
         </>}
@@ -341,10 +341,10 @@ function MarketplaceSession({ scope }: { scope?: string }) {
         <Alert>
           <div className="flex items-start justify-between gap-2 w-full">
             <div className="flex items-start gap-2 min-w-0">
-              <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
+              <RefreshCw className="h-4 w-4 mt-1 shrink-0" />
               <AlertDescription className="space-y-2 min-w-0">
                 <p>{i18n.t("有 ")}{updates.length} {i18n.t(" 个插件的本地版本与注册表 latest 不同：")}</p>
-                <ul className="space-y-1.5" aria-label={i18n.t("可更新插件")}>
+                <ul className="space-y-2" aria-label={i18n.t("可更新插件")}>
                   {updates.slice(0, 5).map(u => {
                     const status = marketplacePluginStatus(u.name, installed, updates)
                     return (
@@ -352,7 +352,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                         <InlineCode className="max-w-full truncate text-sm" title={u.name}>
                           {u.name}：{u.current} → latest {u.latest}
                         </InlineCode>
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="secondary" size="sm" asChild>
                           <Link to={pluginManageUrl(u.name, status.instanceKey)} aria-label={i18n.t("前往 {0} 的插件详情更新", [u.name])}>
                             {i18n.t("去更新")}
                           </Link>
@@ -385,7 +385,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
             aria-label={i18n.t("搜索插件名称、描述...")}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-10"
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -400,11 +400,9 @@ function MarketplaceSession({ scope }: { scope?: string }) {
           />
         </div>
       </div>
-      <div className="console-plugin-catalog-filters console-marketplace-categories" role="group" aria-label={i18n.t("分类")}>
+      <div className="console-marketplace-categories flex flex-wrap gap-2" role="group" aria-label={i18n.t("分类")}>
         {CATEGORIES.map(c => (
-          <button key={c.value || 'all'} type="button" aria-pressed={category === c.value}
-            className={category === c.value ? 'console-plugin-filter-pill is-active' : 'console-plugin-filter-pill'}
-            onClick={() => setCategory(c.value)}>{i18n.t(c.label)}</button>
+          <Chip key={c.value || 'all'} pressed={category === c.value} onPressedChange={() => setCategory(c.value)}>{i18n.t(c.label)}</Chip>
         ))}
       </div>
 
@@ -474,7 +472,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-mono">{plugin.versionSource === 'registry' ? 'latest' : i18n.t("索引")} v{plugin.version}</span>
                     {plugin.downloads?.monthly > 0 && (
-                      <span className="flex items-center gap-0.5">
+                      <span className="flex items-center gap-1">
                         <Download className="w-3 h-3" />
                         {formatDownloads(plugin.downloads.monthly)}{i18n.t("/月")}</span>
                     )}
@@ -501,12 +499,12 @@ function MarketplaceSession({ scope }: { scope?: string }) {
 
       {listView === 'empty' && (
         <StatusState kind="empty" title={i18n.t("未找到插件")} description={i18n.t("尝试调整搜索条件或分类筛选")}
-          actions={search || category || officialOnly ? <Button size="sm" variant="outline" onClick={() => { setSearch(''); setCategory(''); setOfficialOnly(false) }}>{i18n.t("清除筛选")}</Button> : undefined} />
+          actions={search || category || officialOnly ? <Button size="sm" variant="secondary" onClick={() => { setSearch(''); setCategory(''); setOfficialOnly(false) }}>{i18n.t("清除筛选")}</Button> : undefined} />
       )}
 
       {listView === 'results' && hasMore && (
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => setPage(p => p + 1)}>
+          <Button variant="secondary" size="sm" disabled={loading} aria-busy={loading || undefined} onClick={() => setPage(p => p + 1)}>
             {loading ? i18n.t("加载中…") : i18n.t("加载更多")}
           </Button>
         </div>
@@ -559,7 +557,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                             <Link to={pluginConfigUrl(detailStatus.instanceKey)}><Settings />{readOnly ? i18n.t("查看配置") : i18n.t("去配置")}</Link>
                           </Button>
                         )}
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="secondary" size="sm" asChild>
                           <Link to={pluginManageUrl(detail.name, detailStatus.instanceKey)}>{detailStatus.kind === 'update' ? i18n.t("去更新") : i18n.t("插件详情")}</Link>
                         </Button>
                       </div>
@@ -611,7 +609,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                   {detailTab === 'versions' && (
                     <div>
                       {detail.versions?.length > 0 ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {detail.versions.slice(-20).reverse().map(v => (
                             <InlineCode key={v} className="min-w-0 truncate py-1 text-xs" title={v}>{v}</InlineCode>
                           ))}
@@ -641,7 +639,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                       pnpm add {detail.name}@latest
                     </code>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleCopyInstall(detail.name)}
                       aria-label={copied ? i18n.t("已复制安装命令") : i18n.t("复制安装命令")}
@@ -656,13 +654,13 @@ function MarketplaceSession({ scope }: { scope?: string }) {
 
               <DialogFooter className="gap-2 flex-wrap shrink-0 pt-2">
                 {detail.homepage && (
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="secondary" size="sm" asChild>
                     <a href={detail.homepage} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-3 h-3 mr-1" /> {i18n.t(" 主页")}</a>
                   </Button>
                 )}
                 {detail.repository && (
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="secondary" size="sm" asChild>
                     <a
                       href={detail.repository.replace(/^git\+/, '').replace(/\.git$/, '')}
                       target="_blank"
@@ -671,7 +669,7 @@ function MarketplaceSession({ scope }: { scope?: string }) {
                       <ExternalLink className="w-3 h-3 mr-1" /> {i18n.t(" 源码")}</a>
                   </Button>
                 )}
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="secondary" size="sm" asChild>
                   <a
                     href={detail.npm || `https://www.npmjs.com/package/${detail.name}`}
                     target="_blank"
@@ -704,10 +702,10 @@ function MarketplaceSession({ scope }: { scope?: string }) {
 function DependencyList({ title, entries }: { title: string; entries: Record<string, string> }) {
   return (
     <div>
-      <h4 className="text-xs font-medium mb-1.5 text-muted-foreground">{title}</h4>
+      <h4 className="text-xs font-medium mb-2 text-muted-foreground">{title}</h4>
       <div className="space-y-1">
         {Object.entries(entries).map(([name, ver]) => (
-          <div key={name} className="flex items-center justify-between gap-2 px-3 py-1.5 rounded border text-xs bg-muted/40 min-w-0">
+          <div key={name} className="flex items-center justify-between gap-2 px-3 py-2 rounded border text-xs bg-muted/40 min-w-0">
             <span className="font-mono truncate min-w-0" title={name}>{name}</span>
             <span className="text-muted-foreground shrink-0 truncate max-w-[40%] font-mono" title={String(ver)}>{String(ver)}</span>
           </div>

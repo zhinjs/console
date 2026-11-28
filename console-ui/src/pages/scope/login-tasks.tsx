@@ -56,7 +56,7 @@ export interface EndpointsAndLogin {
  * `endpoint.list` plus LoginAssist's `login.list` (only for identities that may operate accounts),
  * re-read every 8 s while the page is visible.
  */
-export function useEndpointsAndLogin(): EndpointsAndLogin {
+export function useEndpointsAndLogin(enabled = true): EndpointsAndLogin {
   const i18n = useI18n()
   const access = useConsoleAccess()
   const canOperate = hasConsolePermission('endpoint.operate', access)
@@ -77,11 +77,12 @@ export function useEndpointsAndLogin(): EndpointsAndLogin {
     })
   }, [canOperate, i18n.locale])
   useEffect(() => {
+    if (!enabled) return
     load()
     const stop = startVisiblePolling(load, 8000)
     return () => { stop(); sequence.current += 1 }
-  }, [load])
-  useInstanceRecovery(load)
+  }, [load, enabled])
+  useInstanceRecovery(() => { if (enabled) load() })
   return { ...state, refresh: load }
 }
 
@@ -207,7 +208,7 @@ export function LoginTaskCard({ task, onSettled, readOnly }: { task: LoginTask; 
             </a>
           ) : null}
           {asksInput && !readOnly ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Input value={input} disabled={busy} onChange={event => setInput(event.target.value)}
                 placeholder={i18n.t('输入验证码，或直接粘贴含 ticket 的 JSON / 回调链接…')} aria-label={i18n.t('输入验证码，或直接粘贴含 ticket 的 JSON / 回调链接…')} />
               {extracted.extractedFrom ? (

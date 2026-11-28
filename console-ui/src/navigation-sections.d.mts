@@ -21,3 +21,13 @@ export interface NavMenuGroup { readonly id: NavMenuGroupId; readonly label: str
 export const NAV_MENU_GROUPS: readonly NavMenuGroup[]
 export function isPluginPageRoute(route: RouteLike | null | undefined): boolean
 export function buildNavigation<T extends RouteLike>(routes: readonly T[], access?: ConsoleAccess): Array<NavTier & { sections: Array<NavSection & { routes: T[]; groups: Array<NavMenuGroup & { routes: T[] }> }> }>
+type BuiltSection<T extends RouteLike> = NavSection & { routes: T[]; groups: Array<NavMenuGroup & { routes: T[] }> }
+type BuiltTier<T extends RouteLike> = NavTier & { sections: BuiltSection<T>[] }
+export function navSections<T extends RouteLike>(tiers: readonly BuiltTier<T>[]): BuiltSection<T>[]
+export function activeSectionId<T extends RouteLike>(tiers: readonly BuiltTier<T>[], activePath: string | undefined, fallback?: RouteLike | null): NavSectionId | null
+export function sectionEntryPath(section: { routes?: readonly RouteLike[] } | null | undefined): string | null
+/** `aria-current` of the current section's link: `"page"` when it opens the current path, else `"true"`. */
+export function sectionLinkCurrent(to: string | null | undefined, pathname: string): 'page' | 'true'
+export function sectionSubnav<T extends RouteLike>(section: BuiltSection<T> | null | undefined): Array<{ id: NavMenuGroupId; label: string; labelled: boolean; routes: T[] }>
+export const TAB_BAR_SECTIONS: 4
+export function tabBarModel<T extends RouteLike>(tiers: readonly BuiltTier<T>[], activeId: NavSectionId | null): { tabs: BuiltSection<T>[]; more: boolean; moreActive: boolean }
