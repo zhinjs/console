@@ -5,6 +5,8 @@ import { createRequire } from 'node:module'
 import ts from 'typescript'
 import { localeModule, isLocaleImport } from './locale-fixture.mjs'
 import * as engagementsModel from '../console-ui/src/pages/engagements-model.mjs'
+import * as featureDisabled from '../console-ui/src/utils/feature-disabled.mjs'
+import * as consoleRoutes from '../console-ui/src/console-routes.mjs'
 import * as workbenchModel from '../console-ui/src/pages/agent-workbench-model.mjs'
 import * as mcpStatus from '../console-ui/src/pages/introspection/mcp-status-model.mjs'
 import * as instanceSections from '../console-ui/src/pages/ops/instance-sections.mjs'
@@ -75,7 +77,7 @@ function workroomFixture(initial) {
     '@zhin.js/console-ui': { cn: (...classes) => classes.filter(Boolean).join(' '), PageHeader: 'page-header', PageShell: 'page-shell', ErrorAlert: 'error-alert', EmptyState: 'empty-state', Badge: 'span', Button: 'button', Card: 'article', CardContent: 'section', Skeleton: 'skeleton', ListItemButton: 'list-item', Sheet: 'sheet', SheetContent: 'sheet-content', SheetDescription: 'p', SheetHeader: 'header', SheetTitle: 'h2' }, '../components/StatusState': { StatusState: 'status-state' },
     '../hooks/useIsMobile': { useIsMobile: () => false },
     '../utils/console-access.mjs': { hasConsolePermission: () => true },
-    './engagements-model.mjs': engagementsModel,
+    './engagements-model.mjs': engagementsModel, '../utils/feature-disabled.mjs': featureDisabled, '../console-routes.mjs': consoleRoutes,
   })
   const view = runtime.mount(() => module.WorkroomBoardPage())
   view.render()
@@ -105,6 +107,38 @@ test('Workroom collaboration list that is genuinely empty shows the empty guidan
   assert.equal(ofType(f.tree, 'status-state').filter(node => node.props.kind !== 'empty').length, 0, 'no error state')
   assert.ok(emptyTitles(f.tree).includes('还没有协作记录'))
   f.close()
+})
+
+// zhinjs/zhin#1250 disabled-feature-as-read-failure: without an Agent the Host answers the Workroom
+// read with 503 「Agent Runtime 尚未就绪」 (the SDK hook keeps only that text). That is a feature that is
+// off — an empty state naming the AI agent and where to set it up — not 「无法读取协作记录」.
+test('Workroom without an Agent shows 「Workroom 未启用」 with the way to AI setup, not a read failure', async () => {
+  const f = workroomFixture()
+  await f.finish({ error: 'Agent Runtime 尚未就绪' })
+  const states = ofType(f.tree, 'status-state')
+  assert.equal(states.length, 1)
+  assert.equal(states[0].props.kind, 'empty', 'not an error state')
+  assert.equal(states[0].props.error, undefined)
+  assert.equal(states[0].props.title, 'Workroom 未启用')
+  assert.match(states[0].props.description, /AI 智能体（@zhin\.js\/agent）/)
+  assert.match(states[0].props.description, /zhin setup --ai/)
+  assert.doesNotMatch(JSON.stringify(states[0].props.description), /无法读取|令牌|权限/)
+  const link = elements(states[0].props.actions).find(node => node.type === 'a')
+  assert.equal(link.props.to, '/features/ai')
+  assert.equal(ofType(f.tree, 'status-state').filter(node => node.props.title === '无法读取协作记录').length, 0)
+  f.close()
+})
+
+test('Workroom keeps 「无法读取协作记录」 for real failures: permission, network and gateway errors', async () => {
+  for (const error of ['HTTP 403', '没有 agent:read 权限', '连接已断开', 'The Zhin instance is not running', 'HTTP 500']) {
+    const f = workroomFixture()
+    await f.finish({ error })
+    const states = ofType(f.tree, 'status-state')
+    assert.equal(states.length, 1, error)
+    assert.equal(states[0].props.title, '无法读取协作记录', error)
+    assert.equal(states[0].props.error, error)
+    f.close()
+  }
 })
 
 // ---------------------------------------------------------------------------

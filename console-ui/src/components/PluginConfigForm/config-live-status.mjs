@@ -21,6 +21,9 @@ function application(value) {
   return value
 }
 
+/** The one sentence for a saved file the running instance fully applies (zhinjs/zhin#1250 apply-status-redundant-sentences). */
+const APPLIED = '已保存的配置都已生效。'
+
 /** A receipt from a different file revision never proves the current file is applied. */
 export function configurationRuntimeStatus(result, revision, locale = 'zh-CN') {
   const t = message => translate(locale, message)
@@ -34,14 +37,14 @@ export function configurationRuntimeStatus(result, revision, locale = 'zh-CN') {
   if (!value || !text(revision)) return { kind: 'unknown', summary: t('配置应用结果未确认，请只读刷新核对；不要重复提交。'), groups: [] }
   if (value.sourceRevision !== revision) return { kind: 'stale', summary: t('运行证据属于其他文件版本，当前版本尚未确认生效。'), application: value, groups: value.groups }
   if (!value.groups.length) return value.saved && value.generation > 0
-    ? { kind: 'applied', summary: t('此文件版本与当前运行配置一致。'), application: value, groups: [] }
+    ? { kind: 'applied', summary: t(APPLIED), application: value, groups: [] }
     : { kind: 'unknown', summary: t('Host 尚未记录此文件版本的配置应用明细。'), application: value, groups: [] }
   const counts = new Set(value.groups.map(group => group.status))
   let kind, summary
   if (counts.has('unknown')) { kind = 'unknown'; summary = '配置应用结果未确认，请只读刷新核对；不要重复提交。' }
   else if (counts.has('superseded')) { kind = 'stale'; summary = '此应用结果已被后续变更替代，请刷新当前文件状态。' }
   else if (counts.has('failed')) { kind = 'failed'; summary = '存在配置应用失败；请查看各项状态。' }
-  else if (counts.size === 1 && counts.has('applied')) { kind = 'applied'; summary = '此文件版本的配置变更已生效。' }
+  else if (counts.size === 1 && counts.has('applied')) { kind = 'applied'; summary = APPLIED }
   else if (counts.has('applied')) { kind = 'partial'; summary = '部分配置已生效；其余待重启或等待依赖。' }
   else { kind = 'pending'; summary = counts.has('restart-pending') ? '配置等待进程重启，当前运行仍使用旧值。' : '配置暂未生效，依赖条件尚未满足。' }
   return { kind, summary: t(summary), application: value, groups: value.groups }

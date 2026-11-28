@@ -2763,6 +2763,15 @@
   .console-ring-gauge circle[stroke="hsl(var(--warning))"] { stroke: hsl(var(--warning-fill)); }
   .console-ring-gauge circle[stroke="hsl(var(--success))"] { stroke: hsl(var(--zc-chart-quantity)); }
 
+  /* The label sits inside the ring: 2.75rem across, the inside of the stroke ≈ 31px, ≈ 30px at the digits' height. At
+     the library's label size (0.8125rem, tabular digits) 「100%」 is ≈ 36px and 「99%」 ≈ 28px, on or over the stroke.
+     The dashboard wrapper names the digit count: two digits take the xs size (0.75rem, ≈ 26px), three take 5/6 of it
+     (0.625rem) with proportional digits (≈ 26px); each leaves ≥ 2px to the stroke.
+     zhinjs/zhin#1250 dashboard-online-ring-text-overflow. */
+  .console-ring-fit { display: inline-flex; flex-shrink: 0; }
+  .console-ring-fit .console-ring-gauge-label { font-size: var(--console-text-xs); }
+  .console-ring-fit[data-digits="3"] .console-ring-gauge-label { font-size: calc(var(--console-text-xs) * 5 / 6); font-variant-numeric: proportional-nums; }
+
   /* The ring shows a quantity (online share): a chart color, never the accent; the warning fill only when an account is
      offline. CSS outranks the component's stroke attribute. console#125. */
 

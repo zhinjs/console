@@ -20,6 +20,8 @@ import { isKeyOnlySessionKey, scheduleIdOfKey, sessionLabel } from '../utils/ses
 import { loadAgentSessionHistory, pushAgentSessionHistory } from '../utils/agent-session-history'
 import { AgentSessionPicker } from '../components/AgentSessionPicker'
 import { CONSOLE_REST } from '../contracts/zhin-console'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
+import { featureUnavailableState } from '../utils/feature-disabled.mjs'
 import { hasConsolePermission } from '../utils/console-access.mjs'
 import { httpRouteAccess } from '../utils/http-permission.mjs'
 import { permissionLabel } from './access/access-model.mjs'
@@ -81,6 +83,8 @@ export default function AgentSessionsPage() {
   const continueScope = personal ? null : sessionConversationScope(selectedKey)
   const [history, setHistory] = useState<string[]>(() => loadAgentSessionHistory())
   const [recentFailed, setRecentFailed] = useState(false)
+  // The recent list is the Agent's trace archive: without an Agent it is off (503), not unreadable (zhinjs/zhin#1250).
+  const [recentAgentOff, setRecentAgentOff] = useState(false)
   const [recentResult, setRecent] = useState<{ connectionScope?: string; rows: RecentSession[]; summary: RecentSessionSummary | null } | null>(null)
   const recentCurrent = recentResult && isInboxCacheScopeActive(scope) && recentResult.connectionScope === scope ? recentResult : null
   const recentRows = recentCurrent ? (scopeFilter ? recentCurrent.rows.filter(row => sessionKeyInScope(row.sessionKey, scopeFilter)) : recentCurrent.rows).slice(0, 12) : null
@@ -254,19 +258,24 @@ export default function AgentSessionsPage() {
   // Recent sessions come from the Host's trace archive; without it the picker falls back to this browser's history.
   useEffect(() => {
     let active = true
-    if (!isInboxCacheScopeActive(scope)) { setRecent(null); setRecentFailed(false); return }
+    if (!isInboxCacheScopeActive(scope)) { setRecent(null); setRecentFailed(false); setRecentAgentOff(false); return }
     if (personal) return
     setRecent(null)
     setRecentFailed(false)
+    setRecentAgentOff(false)
     void apiFetch(RECENT_SESSIONS_PATH, { cache: 'no-store' })
       .then(async (res) => {
-        if (!res.ok) return { rows: [] as RecentSession[], summary: null, failed: true }
+        if (!res.ok) {
+          const body: unknown = await res.json().catch(() => null)
+          const off = featureUnavailableState({ status: res.status, body }) !== null
+          return { rows: [] as RecentSession[], summary: null, failed: !off, off }
+        }
         const body: unknown = await res.json()
-        return { rows: readRecentSessions(body, Number.POSITIVE_INFINITY), summary: summarizeRecentSessions(body), failed: false }
+        return { rows: readRecentSessions(body, Number.POSITIVE_INFINITY), summary: summarizeRecentSessions(body), failed: false, off: false }
       })
-      .catch(() => ({ rows: [] as RecentSession[], summary: null, failed: true }))
-      .then(({ rows, summary, failed }) => {
-        if (active && isInboxCacheScopeActive(scope)) { setRecent({ connectionScope: scope, rows, summary }); setRecentFailed(failed) }
+      .catch(() => ({ rows: [] as RecentSession[], summary: null, failed: true, off: false }))
+      .then(({ rows, summary, failed, off }) => {
+        if (active && isInboxCacheScopeActive(scope)) { setRecent({ connectionScope: scope, rows, summary }); setRecentFailed(failed); setRecentAgentOff(off) }
       })
     return () => {
       active = false
@@ -302,7 +311,7 @@ export default function AgentSessionsPage() {
             icon={MessagesSquare}
             label={i18n.t('Agent 会话')}
             value={sessionSummary?.sessions ?? '—'}
-            sub={sessionSummary ? i18n.t('近 24 小时活跃 {0} 个', [sessionSummary.active]) : i18n.t('未启用或暂时无法读取')}
+            sub={sessionSummary ? i18n.t('近 24 小时活跃 {0} 个', [sessionSummary.active]) : recentAgentOff ? i18n.t('AI 智能体未启用') : i18n.t('未启用或暂时无法读取')}
           />
           <StatCard
             icon={Repeat2}
@@ -344,7 +353,10 @@ export default function AgentSessionsPage() {
             {i18n.t('切换对话')}
           </Button>
           <div id="session-directory">
-            {recentFailed ? <p role="status" className="mb-2 text-xs text-warning">{i18n.t('最近会话未能读取，仅显示本机历史。')}</p> : null}
+            {recentAgentOff ? <p role="status" className="mb-2 text-xs text-muted-foreground">
+              {i18n.t('最近会话需要 AI 智能体（@zhin.js/agent），当前实例没有安装或没有启用它；下面只显示本机历史。')}{' '}
+              <Link className="underline underline-offset-2" to={CONSOLE_PATHS.ai}>{i18n.t('打开 AI 与模型')}</Link>
+            </p> : recentFailed ? <p role="status" className="mb-2 text-xs text-warning">{i18n.t('最近会话未能读取，仅显示本机历史。')}</p> : null}
             {scopeFilter ? (
               <p role="status" className="console-session-scope-filter">
                 <span>{i18n.t('只显示 {0} 的会话', [scopeIdentity(scopeFilter)])}</span>

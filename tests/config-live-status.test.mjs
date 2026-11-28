@@ -123,3 +123,36 @@ for (const page of ['ambient-engagement']) test(`${page} rejects old-connection 
   active = false; resolve({ status: 'saved', ...result() }); await pending
   assert.equal(receipts, 0); assert.equal(feedback, before); assert.equal(reloads, 0)
 })
+
+// zhinjs/zhin#1250 apply-status-redundant-sentences: 「运维 → 配置文件」 and 「功能 → 群聊插话」 share this
+// component. A saved file the instance fully applies is one sentence, not three that say the same thing;
+// a mismatch keeps its explanation (which file the evidence belongs to, which items differ).
+const REDUNDANT = [/此文件版本与当前运行配置一致/, /以下是已保存版本的生效结果/, /结果对应当前保存的配置文件/, /此文件版本的配置变更已生效/]
+const visible = markup => markup.split('<details')[0].replace(/<[^>]+>/g, '\n').split('\n').map(line => line.trim()).filter(Boolean)
+test('an applied saved file says one sentence: 「已保存的配置都已生效。」 (zh and en)', () => {
+  for (const applied of [result([]), result(['applied']), result(['applied', 'applied'])]) {
+    const zh = renderToStaticMarkup(React.createElement(component(), { result: applied, revision: 'file-r2' }))
+    const sentences = visible(zh).filter(line => /[。.]$/.test(line))
+    assert.deepEqual(sentences, ['已保存的配置都已生效。'])
+    for (const pattern of REDUNDANT) assert.doesNotMatch(zh, pattern)
+    const en = renderToStaticMarkup(React.createElement(component('en'), { result: applied, revision: 'file-r2' }))
+    assert.deepEqual(visible(en).filter(line => /[。.]$/.test(line)), ['All saved configuration is in effect.'])
+    assert.doesNotMatch(en.split('<details')[0], /[一-鿿]/)
+  }
+  assert.equal(live.configurationRuntimeStatus(result([]), 'file-r2').summary, '已保存的配置都已生效。')
+  assert.equal(live.configurationRuntimeStatus(result(['applied']), 'file-r2', 'en').summary, 'All saved configuration is in effect.')
+  assert.equal(configurationSaveSummary(result(['applied'])), '配置已保存。 已保存的配置都已生效。')
+})
+
+test('a mismatch still says where it differs, without the redundant lead-in sentences', () => {
+  const partial = renderToStaticMarkup(React.createElement(component(), { result: result(['applied', 'restart-pending']), revision: 'file-r2' }))
+  assert.match(partial, /部分配置已生效；其余待重启或等待依赖。/)
+  assert.match(partial, /待重启/); assert.match(partial, /HTTP 服务 › model/)
+  for (const pattern of REDUNDANT) assert.doesNotMatch(partial, pattern)
+  const stale = renderToStaticMarkup(React.createElement(component(), { result: result(['applied']), revision: 'file-r3' }))
+  assert.match(stale, /运行证据属于其他文件版本，当前版本尚未确认生效。/)
+  assert.match(stale, /结果来自较早保存的配置文件，不代表当前文件。/)
+  assert.doesNotMatch(stale, /已保存的配置都已生效/)
+  const staleEn = renderToStaticMarkup(React.createElement(component('en'), { result: result(['applied']), revision: 'file-r3' }))
+  assert.doesNotMatch(staleEn.split('<details')[0], /[一-鿿]/)
+})

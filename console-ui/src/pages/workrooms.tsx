@@ -6,6 +6,8 @@ import { Badge, Button, Card, CardContent, cn, EmptyState, ListItemButton, PageH
 import { useEngagementDetail, useEngagements, useVenues, type ConsoleEngagementDetail } from '@zhin.js/client'
 import { startVisiblePolling } from '../hooks/visible-polling.mjs'
 import { StatusState } from '../components/StatusState'
+import { featureUnavailableState } from '../utils/feature-disabled.mjs'
+import { CONSOLE_PATHS } from '../console-routes.mjs'
 import { useIsMobile } from '../hooks/useIsMobile'
 import {
   actorLabel,
@@ -66,6 +68,8 @@ function WorkroomBoardPage() {
     void reload()
     if (selectedId) void reloadDetail(selectedId)
   }, [reload, reloadDetail, selectedId])
+  // Without an Agent the Host answers 503 「Agent Runtime 尚未就绪」: the feature is off, not a failed read (zhinjs/zhin#1250).
+  const agentOff = error ? featureUnavailableState(error, i18n.locale) : null
   const totals = useMemo(() => engagementTotals(engagements), [engagements])
   const statusLabel = (status: EngagementStatus) =>
     status === 'running' ? i18n.t("进行中") : status === 'completed' ? i18n.t("已完成") : status === 'cancelled' ? i18n.t("已取消") : i18n.t("失败")
@@ -118,6 +122,9 @@ function WorkroomBoardPage() {
           <Skeleton className="h-[34rem] rounded-xl" />
           <Skeleton className="h-[34rem] rounded-xl" />
         </div>} />
+      ) : agentOff ? (
+        <StatusState kind="empty" title={i18n.t("Workroom 未启用")} description={agentOff.description}
+          actions={<Button asChild variant="secondary" size="sm"><Link to={CONSOLE_PATHS.ai}>{i18n.t("打开 AI 与模型")}</Link></Button>} />
       ) : error ? (
         <StatusState error={error} title={i18n.t("无法读取协作记录")} description={i18n.t("请检查连接，并确认当前令牌具有完整权限。")} onRetry={refresh} />
       ) : (

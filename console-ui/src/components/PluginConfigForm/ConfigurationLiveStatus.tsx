@@ -20,10 +20,9 @@ export function ConfigurationLiveStatus({ result, revision, onRefresh, onApply, 
     </div>
     <p role="status" className={state.kind === 'failed' ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>{state.summary}</p>
     {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
-    <p className="text-xs text-muted-foreground">{i18n.t('以下是已保存版本的生效结果。')}</p>
-    {revision && state.application ? <p className="text-xs text-muted-foreground">{current
-      ? i18n.t('结果对应当前保存的配置文件。')
-      : i18n.t('结果来自较早保存的配置文件，不代表当前文件。')}</p> : null}
+    {/* One sentence says the state (zhinjs/zhin#1250 apply-status-redundant-sentences): 「已保存的配置都已生效。」 stands
+        alone; only a result from an older file adds which file it belongs to. */}
+    {revision && state.application && !current ? <p className="text-xs text-muted-foreground">{i18n.t('结果来自较早保存的配置文件，不代表当前文件。')}</p> : null}
     {counts.length ? <div className="flex flex-wrap gap-2">{counts.map(status => <Badge key={status}
       variant={!current ? 'outline' : status === 'applied' ? 'outline' : status === 'failed' ? 'destructive' : 'warning'}>
       {current ? configurationGroupLabel(status, i18n.locale) : i18n.t('旧版本：{0}', [configurationGroupLabel(status, i18n.locale)])} · {state.groups.filter(group => group.status === status).length}

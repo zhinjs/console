@@ -864,7 +864,11 @@ export default function HomePage() {
           sub={endpointRate !== null ? i18n.t("当前状态 · 在线率 {0}%", [endpointRate]) : stats ? i18n.t("还没有聊天账号") : i18n.t("等待 Host 状态")}
           tone={offlineEndpoints > 0 ? 'warning' : undefined}
           aside={endpointRate !== null
-            ? <MiniRingGauge percent={endpointRate} tone={offlineEndpoints > 0 ? 'warning' : 'primary'} />
+            // 「100%」 at the ring's label size is wider than the ring's inside: the wrapper names the digit count
+            // so the design system shrinks three-digit labels to fit (zhinjs/zhin#1250 dashboard-online-ring-text-overflow).
+            ? <span className="console-ring-fit" data-digits={String(endpointRate).length}>
+                <MiniRingGauge percent={endpointRate} tone={offlineEndpoints > 0 ? 'warning' : 'primary'} />
+              </span>
             : null}
           onOpen={() => navigate('/scope')}
         />
