@@ -38,7 +38,7 @@ import {
   describeSaveResult,
   ambientSaveOutcome,
   ambientRestartOutcome,
-  isPermissionDenied,
+  isReadDenied,
   AMBIENT_STATUS_PERMISSION,
   readAmbientSettings,
   summarizeRecentByGroup,
@@ -72,7 +72,7 @@ async function readAmbientStatus(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<Stat
     const status = validateAmbientStatus(data, locale)
     return { denied: false, view: describeAmbientStatus(status, locale), status }
   } catch (error) {
-    if (isPermissionDenied(error)) return { denied: true }
+    if (isReadDenied(error)) return { denied: true }
     throw error
   }
 }

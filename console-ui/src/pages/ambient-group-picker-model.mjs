@@ -1,5 +1,5 @@
 import { translate } from '../i18n/locale.mjs'
-import { isPermissionDenied, parseGroupList } from './ambient-engagement-model.mjs'
+import { isReadDenied, parseGroupList } from './ambient-engagement-model.mjs'
 
 /**
  * 群聊插话白名单的群选择器：把各在线账号的群列表（endpoint.groups）整理成按平台/账号分组的目录，
@@ -150,11 +150,11 @@ export function addManualGroups(selected, text) {
  * 读取失败（包括所有在线账号都失败）绝不显示成「没有群」。
  */
 export function groupPickerView({ loading, error, catalog, query }) {
-  if (error) return { kind: isPermissionDenied(error) ? 'denied' : 'error', error: String(error) }
+  if (error) return { kind: isReadDenied(error) ? 'denied' : 'error', error: String(error) }
   if (loading || !catalog) return { kind: 'loading' }
   const hasGroups = catalog.sections.some((section) => section.groups.length > 0)
   if (!hasGroups && catalog.failures.length > 0) {
-    const denied = catalog.failures.every((failure) => isPermissionDenied(failure.error))
+    const denied = catalog.failures.every((failure) => isReadDenied(failure.error))
     return { kind: denied ? 'denied' : 'error', error: catalog.failures.map((failure) => failure.error).join('\n') }
   }
   if (!hasGroups) return { kind: 'empty', noOnlineAccount: catalog.sections.length === 0 }

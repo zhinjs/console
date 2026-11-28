@@ -380,13 +380,21 @@ export function isPermissionDenied(error) {
 }
 
 /**
+ * 群聊插话页的「无权限」判断（#64 `ambient-read-error-raw`）：旧 Host 的拒绝文字（`isPermissionDenied`），
+ * 或 `statusFromError` 认出的无权限（Host 的 `forbidden` 码、401/403）。状态、设置和群列表都用它。
+ */
+export function isReadDenied(error) {
+  return isPermissionDenied(error) || statusFromError(error).kind === 'forbidden'
+}
+
+/**
  * 读取失败时给用户看的提示（#64 `ambient-read-error-raw`）：无权限按 `statusFromError` 判断（Host 的
  * `forbidden` 码、401/403、拒绝文字），与页面上 StatusState 的判断一致；其余只说哪一部分没读到，
  * 不把 Host 原文拼进来——原因由 `StatusState error=` 按类型说明，原文只在 `detail`（技术详情）里。
  */
 export function describeReadFailure(error, resource, locale = 'zh-CN') {
   const reason = (typeof error === 'string' ? error : error instanceof Error ? error.message : String(error ?? '')).trim()
-  if (isPermissionDenied(error) || statusFromError(error).kind === 'forbidden') return { denied: true, text: translate(locale, "当前账号没有读取{0}的权限，请联系管理员开通。", [resource]), detail: reason }
+  if (isReadDenied(error)) return { denied: true, text: translate(locale, "当前账号没有读取{0}的权限，请联系管理员开通。", [resource]), detail: reason }
   return { denied: false, text: translate(locale, "{0}读取失败，请稍后重试。", [resource]), detail: reason }
 }
 

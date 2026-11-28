@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { describeReadFailure } from '../console-ui/src/pages/ambient-engagement-model.mjs'
+import { describeReadFailure, isReadDenied } from '../console-ui/src/pages/ambient-engagement-model.mjs'
+import { groupPickerView } from '../console-ui/src/pages/ambient-group-picker-model.mjs'
 
 // #64 `ambient-read-error-raw`: 群聊插话 status / settings read failures pasted the Host's raw text into the
 // StatusState description (「群聊插话状态读取失败：Unknown RPC type: …」), overriding the cause-based title and
@@ -29,4 +30,13 @@ test('both sections hand the error to StatusState without a hand-made descriptio
   const page = readFileSync(new URL('../console-ui/src/pages/ambient-engagement.tsx', import.meta.url), 'utf8')
   assert.doesNotMatch(page, /description=\{failure\.text\}/u)
   assert.equal((page.match(/<StatusState error=\{read\.error\} onRetry=/gu) ?? []).length, 2)
+})
+
+test('the group list in the settings section decides 无权限 the same way', () => {
+  const forbidden = errorWith('Forbidden', { serverCode: 'forbidden' })
+  assert.equal(isReadDenied(forbidden), true)
+  assert.equal(groupPickerView({ loading: false, error: forbidden, catalog: null, query: '' }).kind, 'denied')
+  assert.equal(groupPickerView({ loading: false, error: new Error('REST request failed'), catalog: null, query: '' }).kind, 'error')
+  const page = readFileSync(new URL('../console-ui/src/pages/ambient-engagement.tsx', import.meta.url), 'utf8')
+  assert.match(page, /if \(isReadDenied\(error\)\) return \{ denied: true \}/u, 'the status read treats a forbidden code as denied too')
 })

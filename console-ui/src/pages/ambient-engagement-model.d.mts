@@ -93,6 +93,8 @@ export function validateAmbientSettings(settings: AmbientSettings, locale?: 'zh-
 export function buildAmbientPatches(settings: AmbientSettings, options?: { mergedJudge?: boolean }): AmbientPatch[]
 export function describeSaveResult(result: unknown, locale?: 'zh-CN' | 'en'): SaveFeedback
 export function isPermissionDenied(error: unknown): boolean
+/** 无权限：旧 Host 的拒绝文字，或 statusFromError 认出的 forbidden（状态、设置、群列表共用）。 */
+export function isReadDenied(error: unknown): boolean
 export function describeReadFailure(error: unknown, resource: string, locale?: 'zh-CN' | 'en'): { denied: boolean; text: string; detail: string }
 export interface AmbientGroupSummary { group: string; count: number; lastAt: number; lastText: string; outcomes: Array<{ outcome: AmbientOutcome; label: string; count: number }> }
 export function summarizeRecentByGroup(recent: AmbientStatusView['recent'], locale?: 'zh-CN' | 'en'): AmbientGroupSummary[]
