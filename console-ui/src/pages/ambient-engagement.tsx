@@ -38,7 +38,7 @@ import {
   describeSaveResult,
   ambientSaveOutcome,
   ambientRestartOutcome,
-  isPermissionDenied,
+  isReadDenied,
   AMBIENT_STATUS_PERMISSION,
   readAmbientSettings,
   summarizeRecentByGroup,
@@ -72,7 +72,7 @@ async function readAmbientStatus(locale: 'zh-CN' | 'en' = 'zh-CN'): Promise<Stat
     const status = validateAmbientStatus(data, locale)
     return { denied: false, view: describeAmbientStatus(status, locale), status }
   } catch (error) {
-    if (isPermissionDenied(error)) return { denied: true }
+    if (isReadDenied(error)) return { denied: true }
     throw error
   }
 }
@@ -152,7 +152,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
   const i18n = useI18n()
   if (read.loading && !read.loaded) return <StatusState kind="loading" onRetry={onRetry} placeholder={<Skeleton className="h-40 w-full" />} />
   const failure = read.error ? describeReadFailure(read.error, i18n.t("群聊插话状态"), i18n.locale) : null
-  if (failure && !read.loaded && !failure.denied) return <StatusState error={read.error} description={failure.text} onRetry={onRetry} />
+  if (failure && !read.loaded && !failure.denied) return <StatusState error={read.error} onRetry={onRetry} />
   if (!read.data && !failure?.denied) return null
   if (!read.data || read.data.denied) {
     return <StatusState kind="forbidden" permissions={[AMBIENT_STATUS_PERMISSION]} />
@@ -167,7 +167,7 @@ function AmbientStatusSection({ read, onRetry }: { read: StatusReadState; onRetr
       <CardDescription>{i18n.t("缓冲内观察：最近 24 小时、实例这次启动以来的记录，重启后重新计数。")}</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
-      {failure && <p className="text-xs text-destructive">{i18n.t("刷新失败，下面是上次读到的数据。")} {failure.text}</p>}
+      {failure && <StatusState compact error={read.error} onRetry={onRetry} description={i18n.t("刷新失败，下面是上次读到的数据。")} />}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {view.counts.map((count) => <div key={count.key} className="rounded-md border p-3">
           <div className="text-2xl font-semibold">{count.value}</div>
@@ -298,7 +298,7 @@ function AmbientSettingsSection({ read, onReload, currentReadEpoch, focusGroup }
       <CardContent className="space-y-2 text-sm text-muted-foreground">
         {failure.denied
           ? <p>{i18n.t("当前账号不能查看或修改群聊插话设置，只有管理员账号可以修改。")}</p>
-          : <StatusState error={read.error} description={failure.text} onRetry={() => { void onReload().catch(() => {}) }} />}
+          : <StatusState error={read.error} onRetry={() => { void onReload().catch(() => {}) }} />}
       </CardContent>
     </Card>
   }

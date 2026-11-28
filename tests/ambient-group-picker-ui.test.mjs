@@ -164,7 +164,8 @@ test('a status read failure shows the real reason and retry', async () => {
   const tree = module.AmbientStatusSection({ read: { loading: false, loaded: false, error: 'HTTP 500', data: null }, onRetry: () => { retried++ } })
   assert.equal(tree.type, 'status-state')
   assert.equal(tree.props.error, 'HTTP 500')
-  assert.equal(tree.props.description, '群聊插话状态读取失败：HTTP 500')
+  // #64 ambient-read-error-raw: StatusState explains the cause; the raw text stays in its 技术详情.
+  assert.equal(tree.props.description, undefined)
   tree.props.onRetry(); assert.equal(retried, 1)
 })
 
