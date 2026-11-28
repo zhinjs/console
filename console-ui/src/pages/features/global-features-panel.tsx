@@ -81,7 +81,7 @@ function GlobalFeatureList({ switcher }: { switcher: ReactNode }) {
         </AlertDescription></Alert>
       ) : null}
       {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
-      {matrix.error && listState === 'list' ? <StatusState error={matrix.failure ?? matrix.error} onRetry={matrix.refresh} /> : null}
+      {matrix.error && listState === 'list' ? <StatusState compact error={matrix.failure ?? matrix.error} onRetry={matrix.refresh} description={i18n.t('刷新失败，下面是上一次读取的内容。')} /> : null}
       <ActionReceipt controller={receipt} />
       <Card className="overflow-hidden p-0">
         {listState === 'loading' ? (

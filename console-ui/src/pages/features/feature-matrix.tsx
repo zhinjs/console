@@ -164,7 +164,7 @@ export default function FeatureMatrixPage({ embedded = false, heading }: {
         </Alert>
       ) : null}
       {permissionNote ? <Alert role="status"><AlertDescription>{permissionNote}</AlertDescription></Alert> : null}
-      {error && listState === 'list' ? <StatusState error={failure ?? error} onRetry={refresh} /> : null}
+      {error && listState === 'list' ? <StatusState compact error={failure ?? error} onRetry={refresh} description={i18n.t('刷新失败，下面是上一次读取的内容。')} /> : null}
       <ActionReceipt controller={globalSwitch.receipt} />
       {canToggle ? rows.flatMap(row => adapterColumns.filter(adapter => row.adapters[adapter]).map(adapter => (
         <AdapterSwitchReceipt key={`${row.plugin}\u0000${adapter}`} plugin={row.plugin} adapter={adapter} reload={refresh} />

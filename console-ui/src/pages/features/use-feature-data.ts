@@ -49,7 +49,7 @@ export function useFeatureMatrix(): FeatureMatrixState {
     const request = ++sequence.current
     setState(previous => ({ ...previous, loading: true }))
     const plugins = apiFetch('/api/plugins').then(async response => {
-      if (!response.ok) throw pluginListReadError(response.status, await response.json().catch(() => null), i18n.t)
+      if (!response.ok) throw pluginListReadError(response.status, await response.json().catch(() => null), i18n.t, response.headers.get('retry-after'))
       return globalFeatureRows(validatePluginList(await response.json(), i18n.locale))
     })
     const matrix = requestConsole<unknown>({ type: FEATURE_RPC.MATRIX })
