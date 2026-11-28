@@ -1127,6 +1127,8 @@ export const englishMessages = Object.freeze({
   "聊天记录": "Chat history",
   "按聊天账号和会话查看机器人和大家聊过什么（只读）。": "View conversations by account and chat (read-only).",
   "按聊天账号和会话查看机器人和大家聊过什么，也可以接着聊。": "View conversations by account and chat, and pick one up again.",
+  "按聊天账号和会话查看机器人和大家聊过什么，可以接着聊，也可以从其他消息继续。": "View conversations by account and chat, pick one up again, or continue from another message.",
+  "按聊天账号和会话查看机器人和大家聊过什么，也可以从其他消息继续。": "View conversations by account and chat, and continue from another message.",
   "活跃叶节点:": "Active leaf:",
   "默认（最后一条）": "Default (latest message)",
   "当前活跃": "Currently active",
